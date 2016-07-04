@@ -15,5 +15,3 @@
       ))
   )
 
-(comment
-  (println-str @re-frame.db/app-db))
