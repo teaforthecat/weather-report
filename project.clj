@@ -7,13 +7,17 @@
                  [secretary "1.2.3"]
                  ;; bones deps
                  [prismatic/schema "1.1.2"]
-                 [reagent-forms "0.5.24"]]
+                 [com.taoensso/carmine "2.12.2"]
+                 [reagent-forms "0.5.24"]
+                 [aleph "0.4.1"] ;; brings manifold
+                 ]
 
   :plugins [[lein-cljsbuild "1.1.3"]]
 
   :min-lein-version "2.5.3"
 
   :source-paths ["src/clj"]
+  :test-paths   ["test/clj"]
 
   :clean-targets ^{:protect false} ["resources/public/js/compiled" "target"
                                     "test/js"]
