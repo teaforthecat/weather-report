@@ -4,14 +4,11 @@
 (defn account-li [{:keys [:account/xact-id :account/evo-id]}]
   [:li
    [:span xact-id]
-   [:span "=>"]
+   [:span " => "]
    [:span evo-id]])
 
 (defn accounts-list []
   (let [accounts (subscribe [:accounts])]
     (fn []
       [:div.accounts-list
-       (into [:ul] (map account-li @accounts))]
-      ))
-  )
-
+       (into [:ul] (map account-li @accounts))])))

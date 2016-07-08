@@ -38,7 +38,7 @@
 
 (def validators
   {:username s/Str
-   :password (s/pred #(< 3 (count %)))
+   :password s/Str
    })
 
 (def error_messages
@@ -46,7 +46,7 @@
            :glyphicon "glyphicon-remove"
            :aria      "Email is invalid"}
    :password {:container "has-error"
-              :aria "Password is too short"}})
+              :aria "Password is required"}})
 
 (defn form-validator [validators error_messages]
   (fn [doc]
@@ -59,7 +59,7 @@
         (assoc doc :errors (select-keys error_messages (keys result)))
         (throw (ex-info "invalid schema" {:validators validators}))))))
 
-(defn bootstrap-field-with-feedback [id label valid-fn & {:as opts}]
+(defn field [id label valid-fn & {:as opts}]
   (let [aria-id [:errors id :aria]
         validation #(get-in (valid-fn %) [:errors id])]
     [:div.form-group.has-feedback {:field :container
@@ -88,7 +88,6 @@
 (defn login-form [login-url]
   (let [default-form {:enabled? false}
         form (reagent/atom {})
-        ;; logged-in (reagent/atom false) ;; (subscribe [:bones/logged-in?])
         logged-in (subscribe [:bones/logged-in?])
         validator (form-validator validators error_messages)]
     (fn []
@@ -97,11 +96,10 @@
          [:h3 "Login"]
          [bind-fields
           [:div.fields
-           (bootstrap-field-with-feedback :username "Username" validator)
-           (bootstrap-field-with-feedback :password "Password" validator :type :password)]
+           (field :username "Username" validator)
+           (field :password "Password" validator :type :password)]
           form
           (fn [id value doc]
-            (println doc)
             (validator doc))]
          [cancel "Cancel" form default-form]
          [submit "Submit" :login form default-form]

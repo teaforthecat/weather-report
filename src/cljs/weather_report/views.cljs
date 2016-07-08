@@ -7,14 +7,16 @@
 ;; home
 
 (defn home-panel []
-  (let [name (re-frame/subscribe [:name])]
+  (let [name (re-frame/subscribe [:name])
+        logged-in (re-frame/subscribe [:bones/logged-in?])]
     (fn []
       [:div (str "Hello from " @name ". This is the Home Page.")
        [:div [:a {:href "#/about"} "go to About Page"]]
        [forms/login]
-       [forms/add-account]
-       [ui/accounts-list]
-       ])))
+       (if @logged-in
+         [:div.accounts-view
+          [forms/add-account]
+          [ui/accounts-list]])])))
 
 
 ;; about

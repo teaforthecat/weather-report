@@ -37,15 +37,14 @@
          [:h3 "Add Account"]
          [bind-fields
           [:div.fields
-           (bones/bootstrap-field-with-feedback :account/xact-id "Xact Id" validator
+           (bones/field :account/xact-id "Xact Id" validator
                                                 :field :numeric
                                                 :type :number)
-           (bones/bootstrap-field-with-feedback :account/evo-id "Evo Id" validator
+           (bones/field :account/evo-id "Evo Id" validator
                                                 :field :numeric
                                                 :type :number)]
           form
           (fn [id value doc]
-            (println (pr-str doc))
             (validator doc))]
          [bones/cancel "Cancel" form default-form]
          [bones/submit "Submit" :add-account form default-form]
