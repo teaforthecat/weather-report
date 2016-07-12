@@ -17,6 +17,17 @@
 
 (handlers/add-command [:hello {:who s/Str}])
 
+
+(comment
+  ;; maybe this could work
+  (handlers/register-command :hello {:who s/Str}
+                             (fn [args]
+                               (print-str args)
+                               (let [who (get-in args [:who])]
+                                 {:message (str "hello " who)})))
+
+  )
+
 (def some-jobs
   {:bones.core/wat {:weight-kg s/Num
                     :name s/Str}
@@ -28,14 +39,22 @@
       (mock/content-type "application/edn")))
 
 (defn edn-body
-  [response]
-  (-> response :body bs/to-string edn/read-string))
+  [{:keys [body]}]
+  ;; not sure why the inconsistency here, perhaps the custom 400 response?
+  (if (instance? schema.utils.ValidationError body)
+    body
+    (-> body bs/to-string edn/read-string))
+  )
 
 (deftest cqrs
   (let [resource (handlers/command-resource {})
         h (handler resource)]
     (testing "invalid command value receives 400"
-      ;;todo: this blows up terribly, yada needs to support schema.experimental.abstract-map
+      (let [response @(h (edn-request {:command :x}))]
+        (is (= 400 (:status response)))
+        (let [body (edn-body response)]
+          (is (= "(not (#{:bones.core/wat :hello :bones.core/who} (:command {:command :x})))"
+                 (pr-str body)))))
       )
     (testing "invalid args will receive 400 and an error message"
       (let [response @(h (edn-request {:command :hello :args {:what "wrong key"}}))
