@@ -6,6 +6,8 @@
              [test :refer [deftest is testing]]]
             [io.pedestal.test :refer [response-for]]
             [io.pedestal.http :as bootstrap]
+            [io.pedestal.http.route.definition :refer [defroutes]]
+            [bones.http.service :as service]
             [ring.mock.request :as mock]
             [schema.core :as s]
             ))
@@ -46,15 +48,25 @@
     (-> body bs/to-string edn/read-string))
   )
 
+(defroutes routes
+  [[["/api"
+     ["/command"
+      {:post (handlers/command-resource {})}]
+     ]]])
 
 (def service
-  (::bootstrap/service-fn (bootstrap/create-servlet service/service)))
+  (::bootstrap/service-fn (bootstrap/create-servlet (service/service routes {}))))
+
+(defn edn-post [body-params]
+  (response-for service
+                :post "/api/command"
+                :body (pr-str body-params)
+                :headers {"Content-Type" "application/edn"
+                          "Accept" "application/edn"}))
 
 (deftest cqrs-test
-  (let [body-params {:command :hello :args {:who "world"}}]
-    (is (=
-         (:body (response-for service
-                              :post "/api/command"
-                              :body (pr-str body-params)
-                              :headers {"Content-Type" "application/edn"}))
-         (pr-str  body-params)))))
+  (let [body-params {:command :ping :args {:a 1}}
+        response (edn-post body-params)]
+    (is (= (:body response) "pong"))
+    (is (= (get (:headers response) "Content-Type") "application/edn"))
+    (is (= (:status response) 200))))
