@@ -4,11 +4,11 @@
             [clojure
              [edn :as edn]
              [test :refer [deftest is testing]]]
+            [io.pedestal.test :refer [response-for]]
+            [io.pedestal.http :as bootstrap]
             [ring.mock.request :as mock]
             [schema.core :as s]
-            [yada
-             [handler :refer [handler]]
-             [test :refer [response-for]]]))
+            ))
 
 (defmethod handlers/command :hello
   [command]
@@ -46,27 +46,15 @@
     (-> body bs/to-string edn/read-string))
   )
 
-(deftest cqrs
-  (let [resource (handlers/command-resource {})
-        h (handler resource)]
-    (testing "invalid command value receives 400"
-      (let [response @(h (edn-request {:command :x}))]
-        (is (= 400 (:status response)))
-        (let [body (edn-body response)]
-          (is (= "(not (#{:bones.core/wat :hello :bones.core/who} (:command {:command :x})))"
-                 (pr-str body)))))
-      )
-    (testing "invalid args will receive 400 and an error message"
-      (let [response @(h (edn-request {:command :hello :args {:what "wrong key"}}))
-            ]
-        (is (= 400 (:status response)))
-        (let [body (edn-body response)]
-          (is (= '{:args {:who missing-required-key,
-                          :what disallowed-key}} body)))))
-    (testing "command uses multimethod"
-        (let [response @(h (edn-request {:command :hello :args {:who "world"}}))]
-          (is (= 200 (:status response)))
-          (is (= {:message "hello world"} (edn-body response)))))
-    )
 
-  )
+(def service
+  (::bootstrap/service-fn (bootstrap/create-servlet service/service)))
+
+(deftest cqrs-test
+  (let [body-params {:command :hello :args {:who "world"}}]
+    (is (=
+         (:body (response-for service
+                              :post "/api/command"
+                              :body (pr-str body-params)
+                              :headers {"Content-Type" "application/edn"}))
+         (pr-str  body-params)))))

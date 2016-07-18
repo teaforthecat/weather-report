@@ -6,6 +6,14 @@
                  [re-frame "0.7.0"]
                  [secretary "1.2.3"]
                  ;; bones deps
+                 [io.pedestal/pedestal.service "0.5.0"]
+                 [io.pedestal/pedestal.jetty "0.5.0"]
+                 ;; pedestal deps - necessary?
+                 [ch.qos.logback/logback-classic "1.1.7" :exclusions [org.slf4j/slf4j-api]]
+                 [org.slf4j/jul-to-slf4j "1.7.21"]
+                 [org.slf4j/jcl-over-slf4j "1.7.21"]
+                 [org.slf4j/log4j-over-slf4j "1.7.21"]
+
                  [prismatic/schema "1.1.2"]
                  [com.taoensso/carmine "2.12.2"]
                  [reagent-forms "0.5.24"]
@@ -28,17 +36,21 @@
 
   :repl-options {:nrepl-middleware [cemerick.piggieback/wrap-cljs-repl]}
 
+  :main ^{:skip-aot true} weather-report.server
+
   :profiles
   {:dev
    {:dependencies [
                    [figwheel-sidecar "0.5.4-3"]
-                   [com.cemerick/piggieback "0.2.1"]]
+                   [com.cemerick/piggieback "0.2.1"]
+                   [io.pedestal/pedestal.service-tools "0.5.0"]]
 
     :plugins      [[lein-figwheel "0.5.4-3"]
                    [lein-doo "0.1.6"]
                    ]
     :source-paths ["dev"]
-    }}
+    }
+   :uberjar {:aot [weather-report.server]}}
 
   :cljsbuild
   {:builds

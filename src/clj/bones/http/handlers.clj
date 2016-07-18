@@ -1,10 +1,20 @@
 (ns bones.http.handlers
-  (:require [yada.yada :refer [resource]]
-            [clojure.string :refer [replace]]
+  (:require [yada.yada :refer [resource yada]]
+            [bidi.ring :refer [make-handler]]
+            [clojure.string :as string]
             [byte-streams :refer [def-conversion]]
             [schema.experimental.abstract-map :as abstract-map]
             [schema.coerce :as sc]
-            [schema.core :as s]))
+            [schema.core :as s]
+            ;;ped
+            [io.pedestal.http.route :as route]
+            [io.pedestal.http.route.definition.table :as table]
+            [io.pedestal.http.route.definition :refer [defroutes]]
+            [io.pedestal.interceptor :refer [interceptor]]
+            [io.pedestal.http.body-params :as body-params]
+            [io.pedestal.interceptor.helpers :as helpers]
+            [io.pedestal.interceptor.error :refer [error-dispatch]]
+            [ring.util.response :as ring-resp]))
 
 (s/defschema Command
   (abstract-map/abstract-map-schema
@@ -21,8 +31,8 @@
   (let [[command-name schema] cmd]
     (let [varname (-> command-name
                       str
-                      (replace "/" "-")
-                      (replace "." "-")
+                      (string/replace "/" "-")
+                      (string/replace "." "-")
                       (subs 1)
                       (str "-schema")
                       (symbol))]
@@ -47,26 +57,45 @@
       (let [cmd (first forms)] ;; meh, shrug
         (apply cmd (:args command))))))
 
-(defn handle-command [ctx]
-  (command (get-in ctx [:parameters :body])))
+(add-command [:ping {:a s/Int}])
 
-(defn command-resource [opts]
-  (resource {:id "cqrs/command"
-             :description "post commands"
-             ;;:summary …
-             :methods {:post {:parameters {:body Command}
-                              :response #'handle-command
-                              }}
-             :produces "application/edn"
-             :consumes "application/edn"
-             :responses {400 {:produces [{:media-type #{"application/edn"}}]
-                              :response (fn [ctx]
-                                          (-> ctx :error ex-data :error))}}
-             ;;:authentication {…}
-             ;;:cors {…}
-             ;;:properties {…}
-             ;;:custom/other {…}
-             }))
+(defmethod command :ping [command]
+  (print-str command)
+  "pong")
 
-(defn cqrs [opts]
-  )
+(defn get-req-body [ctx]
+  (-> ctx
+      :request
+      :edn-params ;; or other?
+      ))
+
+(defn get-req-command [ctx]
+  (:command (get-req-body ctx)))
+
+(defn command-handler [ctx]
+  (command (get-req-command ctx)))
+
+(defn check-command-exists [commands]
+  (interceptor {:enter (fn [ctx]
+                         (if (some #{(get-req-command)} commands)
+                           ctx ;;do nothing
+                           (throw (ex-info "command not found"))))}))
+
+
+(defn check-args-spec [commands]
+  (interceptor {:enter (fn [ctx]
+                         (s/validate Command (get-req-body ctx)))}))
+
+;; just a short-cut, for it all goes well
+(def responser
+  (interceptor {:leave (fn [ctx] (update ctx :response ring-resp/response))}))
+
+(defn command-resource [args]
+  (defn command-resource [args]
+    [:bones/command
+     ^:interceptors [(body-params/body-params)
+                     (check-command-exists)
+                     (check-args-spec)
+                     'responser
+                     'error-interceptor]
+     'command-handler]))
