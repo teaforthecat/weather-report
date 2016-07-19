@@ -58,39 +58,41 @@
       (let [cmd (first forms)] ;; meh, shrug
         (apply cmd (:args command))))))
 
-(add-command [:ping {:a s/Int}])
+(add-command [:ping {}])
 
 (defmethod command :ping [command]
-  (print-str command)
   "pong")
 
 (defn get-req-body [ctx]
   (-> ctx
       :request
-      :edn-params ;; or other?
+      :body-params
       ))
 
 (defn get-req-command [ctx]
   (:command (get-req-body ctx)))
-
-;; (def command-handler
-;;   (helpers/handler (fn [ctx]
-;;                      (command (get-req-command ctx)))))
 
 (defn command-handler [req]
   (command (:body-params req)))
 
 (defn check-command-exists []
   (let [commands (-> Command abstract-map/sub-schemas keys)]
-    (interceptor {:enter (fn [ctx]
-                           (if (some #{(get-req-command ctx)} commands)
-                             ctx ;;do nothing
-                             (throw (ex-info "command not found"))))})))
+    (interceptor {:name :bones/check-command-exists
+                  :enter (fn [ctx]
+                           (let [cmd (get-req-command ctx)]
+                             (if (some #{cmd} commands)
+                               ctx ;;do nothing
+                               (throw (ex-info "command not found"
+                                               {:status 401
+                                                :message (str "command not found: " cmd)
+                                                :available-commands commands})))))})))
 
 (defn check-args-spec []
   (interceptor {:name :bones/check-args-spec
                 :enter (fn [ctx]
-                         (s/validate Command (get-req-body ctx)))}))
+                         (if-let [error (s/check Command (get-req-body ctx))]
+                           (throw (ex-info "args not valid" (assoc error :status 401)))
+                           ctx))}))
 
 (defn respond-with [body content-type]
   (-> body
@@ -106,40 +108,36 @@
   (interceptor {:name :bones/renderer
                 :leave (fn [ctx] (render ctx))}))
 
-(defn conform-body-params
-  "since there should only be one type of params, stuff them into a single
-  key on the request :body-params for ease of use
-  - I wish the body-params helper did this"
-  [ctx]
-  (let [req (:request ctx)]
-    (assoc-in ctx [:request :body-params] (or (:edn-params req)
-                                              (:json-params req)
-                                              (:transit-params req)
-                                              (:form-params req)))))
-
 (def body-params
+  "shim for the body-params interceptor, stuff the result into a single
+  key on the request `body-params' for ease of use"
   (interceptor {:name :bones/body-params
-                :enter conform-body-params}))
+                :enter (fn [ctx]
+                         (update ctx
+                                 :request (fn [req]
+                                            (assoc req :body-params (or (:edn-params req)
+                                                                        (:json-params req)
+                                                                        (:transit-params req)
+                                                                        (:form-params req))))))}))
 
-;; need to register exceptions here
-(def error-interceptor
-  (error-dispatch [ctx ex]
-                  [{:interceptor :bones/check-command-exists}]
-                  (assoc ctx :response (ring-resp/not-found "Command Not Found"))
-                  :else
-                  (assoc ctx :io.pedestal.interceptor.chain/error ex)))
+(def error-responder
+  (interceptor {:name :bones/error-responder
+                :error (fn [ctx ex]
+                         (let [data (-> ex ex-data :exception ex-data)
+                               status (or (:status data) 500)]
+                           (-> (assoc ctx :response (dissoc data :status)) ;; sets body
+                               (render) ;; sets content-type
+                               (update :response assoc :status status))))}))
 
 (defn command-resource [args]
   [:bones/command
-   ;; need to use namespace in so this can be called from a macro (defroutes)
-   ^:interceptors [(cn/negotiate-content ["application/edn"])
+   ;; need to use namespace so this can be called from a macro (defroutes)
+   ^:interceptors ['bones.http.handlers/error-responder ;; must come first
+                   (cn/negotiate-content ["application/edn"])
                    (body-params/body-params)
                    'bones.http.handlers/body-params
                    (bones.http.handlers/check-command-exists)
-                   ;; (bones.http.handlers/check-args-spec)
+                   (bones.http.handlers/check-args-spec)
                    'bones.http.handlers/renderer
-                   ;; 'bones.http.handlers/error-interceptor
                    ]
-   ;;todo resolvable symbol here
-   ;; ::command-handler
    'bones.http.handlers/command-handler])

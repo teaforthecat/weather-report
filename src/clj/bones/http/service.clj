@@ -1,5 +1,6 @@
 (ns bones.http.service
-  (:require [com.stuartsierra.component :as component]
+  (:require [io.pedestal.http :as http]
+            [com.stuartsierra.component :as component]
             [io.pedestal.http :as server]))
 
 (defrecord Server [service conf]

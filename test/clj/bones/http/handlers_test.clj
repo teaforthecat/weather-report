@@ -65,8 +65,24 @@
                           "Accept" "application/edn"}))
 
 (deftest cqrs-test
-  (let [body-params {:command :ping :args {:a 1}}
-        response (edn-post body-params)]
-    (is (= (:body response) "pong"))
-    (is (= (get (:headers response) "Content-Type") "application/edn"))
-    (is (= (:status response) 200))))
+  (testing "non-existant args"
+    (let [response (edn-post {:command :ping #_no-args})]
+      (is (= (:body response) "{:args missing-required-key}"))
+      (is (= (get (:headers response) "Content-Type") "application/edn"))
+      (is (= (:status response) 401))))
+  (testing "non-existant command"
+    (let [response (edn-post {:command :nuthin})]
+      (is (= (:body response) "{:message \"command not found: :nuthin\", :available-commands (:ping)}"))
+      (is (= (get (:headers response) "Content-Type") "application/edn"))
+      (is (= (:status response) 401))))
+  (testing "ping with invalid args"
+    (let [response (edn-post {:command :ping :args {:no-no :allowed}})]
+      (is (= (:body response) "{:args {:no-no disallowed-key}}"))
+      (is (= (get (:headers response) "Content-Type") "application/edn"))
+      (is (= (:status response) 401))))
+  (testing "ping succeeds"
+    (let [body-params {:command :ping :args {}}
+          response (edn-post body-params)]
+      (is (= (:body response) "pong"))
+      (is (= (get (:headers response) "Content-Type") "application/edn"))
+      (is (= (:status response) 200)))))
