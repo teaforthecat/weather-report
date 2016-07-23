@@ -3,44 +3,30 @@
             [com.stuartsierra.component :as component]
             [io.pedestal.http :as server]))
 
-(defprotocol Service
-  (create [component]))
-
-(defrecord Server [service conf]
-  Service
-  (create [cmp]
-    (assoc cmp :server (server/create-server (:service cmp))))
-  component/Lifecycle
-  (start [cmp]
-    (-> cmp
-        (create)
-        (update :server server/start)))
-  (stop [cmp]
-    (update cmp :server server/stop)))
-
 (defn service [routes conf]
   {:env :prod
-   ::server/join? false  ;; DEV ONLY
-   :io.pedestal.http/routes  routes
-   ::http/resource-path "/public"
+   ::server/join? (or (:join? conf) false)
+   ::http/routes  routes
+   ::http/resource-path (or (:resource-path conf) "/public")
    ::http/type :jetty
-   ::http/port 8080
+   ::http/port (or (:port conf) 8080)
    ::http/container-options {:h2c? true
                              :h2? false
                              :ssl? false}})
 
+(defrecord Server [routes conf]
+  component/Lifecycle
+  (start [cmp]
+    (let [config (get-in cmp [:conf :http/service])
+          routes (or (get-in cmp [:routes :routes]) (throw (ex-info "no routes found" {:cmp cmp})))
+          service-map (service routes config)
+          service (server/create-server service-map)]
+      (assoc cmp :server (server/start service))))
+  (stop [cmp]
+    (update cmp :server server/stop)))
 
-(comment
-  (io.pedestal.http.route.definition/defroutes routes
-    [[["/api"
-       ["/query" {:get [:bones/query  (fn [req] {:status 200 :body "hello"})]}]
-       ["/command"
-        {:post (bones.http.handlers/command-resource {})
-         :get [:bones/commands-list (fn [req] {:status 200 :body (pr-str (bones.http.handlers/registered-commands))})]}]
-       ]]])
+(defn start-system [system & components]
+  (swap! system component/update-system components component/start))
 
-  (def s (map->Server {:service  (service routes {})}))
-  (def ss (create  s))
-  (def sss (component/start ss)) ;; blocksssss.....
-  (def ssss (component/stop sss))
-  )
+(defn stop-system [system & components]
+  (swap! system component/update-system-reverse components component/stop))

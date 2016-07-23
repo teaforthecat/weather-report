@@ -25,11 +25,7 @@
 (defn edn-body [{:keys [body]}]
   (-> body bs/to-string edn/read-string))
 
-(defroutes routes
-  [[["/api"
-     ["/command"
-      {:post (handlers/command-resource {})}]
-     ]]])
+(def routes (->  (handlers/map->CQRS {}) .start :routes))
 
 (def service
   (::bootstrap/service-fn (bootstrap/create-servlet (service/service routes {}))))
@@ -41,6 +37,13 @@
                 :headers {"Content-Type" "application/edn"
                           "Accept" "application/edn"}))
 
+(defn edn-get [path]
+  (response-for service
+                :get path
+                :headers {"Content-Type" "application/edn"
+                          "Accept" "application/edn"}))
+
+
 (deftest register-command-test
   (testing "optional handler argument"
     (is (handlers/register-command :test {} ::hello)))
@@ -50,7 +53,7 @@
     (is (thrown? clojure.lang.ExceptionInfo
                  (handlers/register-command :nope {})))))
 
-(deftest cqrs-test
+(deftest command-resource-test
   (testing "non-existant args"
     (let [response (edn-post {:command :echo #_no-args})]
       (is (= (:body response) "{:args missing-required-key}"))
@@ -79,5 +82,12 @@
     (let [body-params {:command :hello :args {:who "mr teapot"}}
           response (edn-post body-params)]
       (is (= (:body response) "{:message \"hello mr teapot\"}"))
+      (is (= (get (:headers response) "Content-Type") "application/edn"))
+      (is (= (:status response) 200)))))
+
+(deftest command-list-resource-test
+  (testing "get"
+    (let [response (edn-get "/api/command")]
+      (is (= (:body response) "({:args {Any Any}, :command (enum :echo)} {:args {:who java.lang.String}, :command (enum :hello)})"))
       (is (= (get (:headers response) "Content-Type") "application/edn"))
       (is (= (:status response) 200)))))

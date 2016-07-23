@@ -1,5 +1,6 @@
 (ns bones.http.handlers
-  (:require [yada.yada :refer [resource yada]]
+  (:require [com.stuartsierra.component :as component]
+            [yada.yada :refer [resource yada]]
             [bidi.ring :refer [make-handler]]
             [clojure.string :as string]
             [byte-streams :refer [def-conversion]]
@@ -92,7 +93,7 @@
 (defn command-handler [req]
   (command (:body-params req)))
 
-(defn check-command-exists []
+(def check-command-exists
   (let [commands (-> Command abstract-map/sub-schemas keys)]
     (interceptor {:name :bones/check-command-exists
                   :enter (fn [ctx]
@@ -104,7 +105,7 @@
                                                 :message (str "command not found: " cmd)
                                                 :available-commands commands})))))})))
 
-(defn check-args-spec []
+(def check-args-spec
   (interceptor {:name :bones/check-args-spec
                 :enter (fn [ctx]
                          (if-let [error (s/check Command (get-req-body ctx))]
@@ -152,6 +153,12 @@
                                (render) ;; sets content-type
                                (update :response assoc :status status))))}))
 
+(defn get-resource-interceptors []
+  ^:interceptors
+  ['bones.http.handlers/error-responder ;; must come first
+   (cn/negotiate-content ["application/edn"])
+   'bones.http.handlers/renderer])
+
 (defn command-resource
   "# post request handler
     * uses `Command' schema for validation
@@ -165,8 +172,27 @@
                    (cn/negotiate-content ["application/edn"])
                    (body-params/body-params)
                    'bones.http.handlers/body-params
-                   (bones.http.handlers/check-command-exists)
-                   (bones.http.handlers/check-args-spec)
+                   'bones.http.handlers/check-command-exists
+                   'bones.http.handlers/check-args-spec
                    'bones.http.handlers/renderer
                    ]
    'bones.http.handlers/command-handler])
+
+(defn command-list-handler [ctx]
+  (registered-commands))
+
+(defn command-list-resource [conf]
+  ;; [:bones/command-list 'bones.http.handlers/registerd-commands]
+  [:bones/command-list (get-resource-interceptors) 'bones.http.handlers/command-list-handler]
+  )
+
+(defrecord CQRS [conf]
+  component/Lifecycle
+  (start [cmp]
+    (let [config (get-in cmp [:conf :http/handlers])]
+      (assoc cmp :routes
+             (io.pedestal.http.route/expand-routes
+              [[[(or (:mount-path config) "/api")
+                 ["/command"
+                  {:post (command-resource {})
+                   :get (command-list-resource {})}]]]])))))

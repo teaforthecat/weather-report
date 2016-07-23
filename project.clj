@@ -36,7 +36,7 @@
 
   :repl-options {:nrepl-middleware [cemerick.piggieback/wrap-cljs-repl]}
 
-  :main ^{:skip-aot true} weather-report.server
+  :main ^{:skip-aot true} weather-report.core
 
   :profiles
   {:dev
