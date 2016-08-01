@@ -14,11 +14,13 @@
                  [org.slf4j/jcl-over-slf4j "1.7.21"]
                  [org.slf4j/log4j-over-slf4j "1.7.21"]
 
+                 [buddy/buddy-auth "0.8.1"]
+                 [buddy/buddy-hashers "0.9.1"]
+
                  [prismatic/schema "1.1.2"]
                  [com.taoensso/carmine "2.12.2"]
+
                  [reagent-forms "0.5.24"]
-                 [yada "1.1.28"]
-                 [aleph "0.4.1"] ;; brings manifold
                  [ring-mock "0.1.5"]
                  ]
 

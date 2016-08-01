@@ -1,9 +1,7 @@
 (ns bones.http.handlers
   (:require [com.stuartsierra.component :as component]
-            [yada.yada :refer [resource yada]]
-            [bidi.ring :refer [make-handler]]
             [clojure.string :as string]
-            [byte-streams :refer [def-conversion]]
+            ;; [byte-streams :refer [def-conversion]]
             [schema.experimental.abstract-map :as abstract-map]
             [schema.coerce :as sc]
             [schema.core :as s]
@@ -12,11 +10,14 @@
             [io.pedestal.http.route.definition.table :as table]
             [io.pedestal.http.route.definition :refer [defroutes]]
             [io.pedestal.interceptor :refer [interceptor]]
+            [io.pedestal.http.ring-middlewares :as middlewares]
             [io.pedestal.http.content-negotiation :as cn]
             [io.pedestal.http.body-params :as body-params]
-            [io.pedestal.interceptor.helpers :as helpers]
+            [io.pedestal.interceptor.helpers :as helpers :refer [definterceptor]]
             [io.pedestal.interceptor.error :refer [error-dispatch]]
-            [ring.util.response :as ring-resp]))
+            [ring.util.response :as ring-resp]
+            [ring.middleware.session.cookie :refer [cookie-store]]
+            [bones.http.auth :as auth]))
 
 (s/defschema Command
   (abstract-map/abstract-map-schema
@@ -24,7 +25,7 @@
    {:args {s/Keyword s/Any}}))
 
 (defmulti command :command)
-(defmethod command :default [command]
+(defmethod command :default [command req]
   {:status 400
    :body {:error "command not found"}})
 
@@ -66,10 +67,10 @@
      (if (nil? command-handler)
        (throw (ex-info "command not resolved to a function" {:command explicit-handler} )))
      (add-command command-name schema)
-     (defmethod command command-name [command]
-       (command-handler (:args command))))))
+     (defmethod command command-name [command req]
+       (command-handler (:args command) req)))))
 
-(defn echo "built-in sanity check" [args] args)
+(defn echo "built-in sanity check" [args req] args)
 
 (register-command :echo {s/Any s/Any})
 
@@ -80,6 +81,9 @@
        abstract-map/sub-schemas
        (map (fn [sub]
               (:extended-schema (second sub))))))
+;;WIP
+(defn login [request data]
+  (assoc-in request [:session :identity] data))
 
 (defn get-req-body [ctx]
   (-> ctx
@@ -91,19 +95,35 @@
   (:command (get-req-body ctx)))
 
 (defn command-handler [req]
-  (command (:body-params req)))
+  (command (:body-params req) req))
+
+(defn command-list-handler [_]
+  (registered-commands))
+
+(def identity-interceptor
+  ;; sets request :identity to data of decrypted "Token" in the "Authorization" header
+  ;; sets request :identity to data of :identity in bones-session cookie
+  (helpers/on-request :bones.auth/identity
+                      (auth/identity-interceptor)))
+
+(def session
+  ;; interceptor
+  ;; sets request :session to decrypted data in the bones-session cookie
+  ;; sets cookie to encrypted value of data in request :session
+  (middlewares/session auth/cookie-opts))
+
 
 (def check-command-exists
-  (let [commands (-> Command abstract-map/sub-schemas keys)]
-    (interceptor {:name :bones/check-command-exists
-                  :enter (fn [ctx]
-                           (let [cmd (get-req-command ctx)]
-                             (if (some #{cmd} commands)
-                               ctx ;;do nothing
-                               (throw (ex-info "command not found"
-                                               {:status 401
-                                                :message (str "command not found: " cmd)
-                                                :available-commands commands})))))})))
+  (interceptor {:name :bones/check-command-exists
+                :enter (fn [ctx]
+                         (let [commands (-> Command abstract-map/sub-schemas keys)
+                               cmd (get-req-command ctx)]
+                           (if (some #{cmd} commands)
+                             ctx ;;do nothing
+                             (throw (ex-info "command not found"
+                                             {:status 401
+                                              :message (str "command not found: " cmd)
+                                              :available-commands commands})))))}))
 
 (def check-args-spec
   (interceptor {:name :bones/check-args-spec
@@ -145,11 +165,15 @@
                                                                     (:form-params req))))))}))
 
 (def error-responder
+  ;; get status of the nested(thrown) exception's ex-data for specialized http responses
   (interceptor {:name :bones/error-responder
                 :error (fn [ctx ex]
-                         (let [data (-> ex ex-data :exception ex-data)
-                               status (or (:status data) 500)]
-                           (-> (assoc ctx :response (dissoc data :status)) ;; sets body
+                         (let [exception (-> ex ex-data :exception) ;; nested exception
+                               data (ex-data exception)
+                               status (or (:status data) 500)
+                               resp {:message (.getMessage exception)
+                                     :data (dissoc data :status)}]
+                           (-> (assoc ctx :response resp) ;; sets body
                                (render) ;; sets content-type
                                (update :response assoc :status status))))}))
 
@@ -165,11 +189,13 @@
     * requires exclusively `:command' and `:args' keys in post body
     * hands off `:args' of post body to `:command'
     * commands are registered with `register-command'"
-  [args]
+  [conf]
   [:bones/command
    ;; need to use namespace so this can be called from a macro (defroutes)
    ^:interceptors ['bones.http.handlers/error-responder ;; must come first
                    (cn/negotiate-content ["application/edn"])
+                   'bones.http.handlers/session ;; auth
+                   'bones.http.handlers/identity-interceptor ;; auth
                    (body-params/body-params)
                    'bones.http.handlers/body-params
                    'bones.http.handlers/check-command-exists
@@ -178,13 +204,8 @@
                    ]
    'bones.http.handlers/command-handler])
 
-(defn command-list-handler [ctx]
-  (registered-commands))
-
 (defn command-list-resource [conf]
-  ;; [:bones/command-list 'bones.http.handlers/registerd-commands]
-  [:bones/command-list (get-resource-interceptors) 'bones.http.handlers/command-list-handler]
-  )
+  [:bones/command-list (get-resource-interceptors) 'bones.http.handlers/command-list-handler])
 
 (defrecord CQRS [conf]
   component/Lifecycle
@@ -194,5 +215,5 @@
              (io.pedestal.http.route/expand-routes
               [[[(or (:mount-path config) "/api")
                  ["/command"
-                  {:post (command-resource {})
-                   :get (command-list-resource {})}]]]])))))
+                  {:post (command-resource config)
+                   :get (command-list-resource config)}]]]])))))
