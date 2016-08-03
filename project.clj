@@ -8,17 +8,17 @@
                  ;; bones deps
                  [io.pedestal/pedestal.service "0.5.0"]
                  [io.pedestal/pedestal.jetty "0.5.0"]
+                 [manifold "0.1.4"]
+                 [buddy/buddy-auth "0.8.1"]
+                 [buddy/buddy-hashers "0.9.1"]
+                 [prismatic/schema "1.1.2"]
+                 [com.taoensso/carmine "2.12.2"]
+
                  ;; pedestal deps - necessary?
                  [ch.qos.logback/logback-classic "1.1.7" :exclusions [org.slf4j/slf4j-api]]
                  [org.slf4j/jul-to-slf4j "1.7.21"]
                  [org.slf4j/jcl-over-slf4j "1.7.21"]
                  [org.slf4j/log4j-over-slf4j "1.7.21"]
-
-                 [buddy/buddy-auth "0.8.1"]
-                 [buddy/buddy-hashers "0.9.1"]
-
-                 [prismatic/schema "1.1.2"]
-                 [com.taoensso/carmine "2.12.2"]
 
                  [reagent-forms "0.5.24"]
                  [ring-mock "0.1.5"]

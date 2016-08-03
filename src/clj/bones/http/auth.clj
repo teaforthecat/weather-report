@@ -81,7 +81,7 @@
    :enter (fn [ctx]
             (if (authenticated? (:request ctx))
               ctx
-              (throw (ex-info "Not Authenticated" {:status 403 :message "Not Authenticated"}))))})
+              (throw (ex-info "Not Authenticated" {:status 403}))))})
 
 (defn identity-interceptor []
   ;; identity as function to hack the ring middleware for pedestal

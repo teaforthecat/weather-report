@@ -25,9 +25,9 @@
    {:args {s/Keyword s/Any}}))
 
 (defmulti command :command)
-(defmethod command :default [command req]
-  {:status 400
-   :body {:error "command not found"}})
+;; (defmethod command :default [command req]
+;;   {:status 400
+;;    :body {:error "command not found"}})
 
 (defn add-command
   "ensure a unique command is created based on a name spaced keyword"
@@ -65,13 +65,14 @@
   ([command-name schema explicit-handler]
    (let [command-handler (resolve-command explicit-handler)]
      (if (nil? command-handler)
-       (throw (ex-info "command not resolved to a function" {:command explicit-handler} )))
+       (throw (ex-info "could not resolve command to a function" {:command explicit-handler} )))
      (add-command command-name schema)
      (defmethod command command-name [command req]
        (command-handler (:args command) req)))))
 
+;; remove?
 (defn echo "built-in sanity check" [args req] args)
-
+;; remove?
 (register-command :echo {s/Any s/Any})
 
 (defn registered-commands
@@ -79,26 +80,33 @@
   []
   (->> Command
        abstract-map/sub-schemas
+       ;; login should probably be filtered out?
        (map (fn [sub]
               (:extended-schema (second sub))))))
-;;WIP
-(defn login [request data]
-  (assoc-in request [:session :identity] data))
 
-(defn get-req-body [ctx]
+(defn body [ctx]
   (-> ctx
       :request
       :body-params
       ))
 
 (defn get-req-command [ctx]
-  (:command (get-req-body ctx)))
+  (:command (body ctx)))
 
 (defn command-handler [req]
   (command (:body-params req) req))
 
 (defn command-list-handler [_]
-  (registered-commands))
+  {:available-commands (registered-commands)})
+
+(defn login-handler [req]
+  (if (= :login (get-in req [:body-params :command]))
+    (let [user-data (command (:body-params req) req)]
+      (if user-data
+        {:session {:identity user-data}
+         :token (auth/token {:identity user-data})}
+        (throw (ex-info "Invalid Credentials" {:status 422}))))
+    (throw (ex-info "Invalid Command" {:status 401}))))
 
 (def identity-interceptor
   ;; sets request :identity to data of decrypted "Token" in the "Authorization" header
@@ -128,14 +136,16 @@
 (def check-args-spec
   (interceptor {:name :bones/check-args-spec
                 :enter (fn [ctx]
-                         (if-let [error (s/check Command (get-req-body ctx))]
+                         (if-let [error (s/check Command (body ctx))]
                            (throw (ex-info "args not valid" (assoc error :status 401)))
                            ctx))}))
 
-(defn respond-with [body content-type]
-  (-> body
-      ring-resp/response
-      (ring-resp/content-type content-type)))
+(defn respond-with [response content-type]
+  (let [session (:session response)]
+    (-> (dissoc response :session) ;;body
+        ring-resp/response
+        (assoc :session session) ;; new session info for Set-Cookie header
+        (ring-resp/content-type content-type))))
 
 (defmulti render
   "render content-types, extensible, relies on io.pedestal.http.content-negotiation.
@@ -171,9 +181,11 @@
                          (let [exception (-> ex ex-data :exception) ;; nested exception
                                data (ex-data exception)
                                status (or (:status data) 500)
-                               resp {:message (.getMessage exception)
-                                     :data (dissoc data :status)}]
-                           (-> (assoc ctx :response resp) ;; sets body
+                               resp {:message (.getMessage exception)}
+                               response (if (empty? (dissoc data :status))
+                                          resp
+                                          (assoc resp :data (dissoc data :status)))]
+                           (-> (assoc ctx :response response) ;; sets body
                                (render) ;; sets content-type
                                (update :response assoc :status status))))}))
 
@@ -196,6 +208,7 @@
                    (cn/negotiate-content ["application/edn"])
                    'bones.http.handlers/session ;; auth
                    'bones.http.handlers/identity-interceptor ;; auth
+                   'bones.http.auth/interceptor ;; auth
                    (body-params/body-params)
                    'bones.http.handlers/body-params
                    'bones.http.handlers/check-command-exists
@@ -207,6 +220,19 @@
 (defn command-list-resource [conf]
   [:bones/command-list (get-resource-interceptors) 'bones.http.handlers/command-list-handler])
 
+(defn login-resource [conf]
+  [:bones/login
+   ^:interceptors ['bones.http.handlers/error-responder ;; must come first
+                   (cn/negotiate-content ["application/edn"])
+                   'bones.http.handlers/session ;; auth
+                   (body-params/body-params)
+                   'bones.http.handlers/body-params ;;shim
+                   'bones.http.handlers/check-command-exists ;; :login should be registered
+                   'bones.http.handlers/check-args-spec ;; user defined login parameters
+                   'bones.http.handlers/renderer
+                   ]
+   'bones.http.handlers/login-handler])
+
 (defrecord CQRS [conf]
   component/Lifecycle
   (start [cmp]
@@ -216,4 +242,8 @@
               [[[(or (:mount-path config) "/api")
                  ["/command"
                   {:post (command-resource config)
-                   :get (command-list-resource config)}]]]])))))
+                   :get (command-list-resource config)}]
+                 ;; ["/query"
+                 ;;  {:get (query-resource config)}]
+                 ["/login"
+                  {:post (login-resource config)}]]]])))))
