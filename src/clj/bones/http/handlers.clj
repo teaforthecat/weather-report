@@ -1,6 +1,7 @@
 (ns bones.http.handlers
   (:require [com.stuartsierra.component :as component]
             [clojure.string :as string]
+            [clojure.edn :as edn]
             ;; [byte-streams :refer [def-conversion]]
             [schema.experimental.abstract-map :as abstract-map]
             [schema.coerce :as sc]
@@ -24,10 +25,16 @@
    :command
    {:args {s/Keyword s/Any}}))
 
+;; todo register multiple query handlers
+;; remove?
+;; this gets redefined in `register-query-handler'
+(s/defschema Query
+  {:q s/Any
+   (s/optional-key :type) s/Str
+   s/Keyword s/Any})
+
+;; a default is not needed due to the `check-command-exists' interceptor
 (defmulti command :command)
-;; (defmethod command :default [command req]
-;;   {:status 400
-;;    :body {:error "command not found"}})
 
 (defn add-command
   "ensure a unique command is created based on a name spaced keyword"
@@ -65,10 +72,19 @@
   ([command-name schema explicit-handler]
    (let [command-handler (resolve-command explicit-handler)]
      (if (nil? command-handler)
-       (throw (ex-info "could not resolve command to a function" {:command explicit-handler} )))
+       (throw (ex-info "could not resolve command to a function" {:command explicit-handler})))
      (add-command command-name schema)
      (defmethod command command-name [command req]
        (command-handler (:args command) req)))))
+
+(defn register-query-handler [explicit-handler schema]
+  (let [user-query-handler (resolve-command explicit-handler)]
+    (if (nil? user-query-handler)
+      (throw (ex-info "could not resolve query to a function" {:query explicit-handler})))
+    ;; todo register multiple query handlers
+    (s/defschema Query schema)
+    (defn query [query-params req]
+      (user-query-handler query-params req))))
 
 ;; remove?
 (defn echo "built-in sanity check" [args req] args)
@@ -87,8 +103,7 @@
 (defn body [ctx]
   (-> ctx
       :request
-      :body-params
-      ))
+      :body-params))
 
 (defn get-req-command [ctx]
   (:command (body ctx)))
@@ -108,6 +123,16 @@
         (throw (ex-info "Invalid Credentials" {:status 422}))))
     (throw (ex-info "Invalid Command" {:status 401}))))
 
+;; todo register multiple query handlers somehow
+;; remove?
+;; this gets overwritten by `register-query-handler'
+(defn query [params req]
+  (let [q (:q params)]
+    {:results (edn/read-string q)}))
+
+(defn query-handler [req]
+  (query (:query-params req) req))
+
 (def identity-interceptor
   ;; sets request :identity to data of decrypted "Token" in the "Authorization" header
   ;; sets request :identity to data of :identity in bones-session cookie
@@ -119,7 +144,6 @@
   ;; sets request :session to decrypted data in the bones-session cookie
   ;; sets cookie to encrypted value of data in request :session
   (middlewares/session auth/cookie-opts))
-
 
 (def check-command-exists
   (interceptor {:name :bones/check-command-exists
@@ -138,6 +162,13 @@
                 :enter (fn [ctx]
                          (if-let [error (s/check Command (body ctx))]
                            (throw (ex-info "args not valid" (assoc error :status 401)))
+                           ctx))}))
+
+(def check-query-params-spec
+  (interceptor {:name :bones/check-query-params-spec
+                :enter (fn [ctx]
+                         (if-let [error (s/check Query (get-in ctx [:request :query-params] {}))]
+                           (throw (ex-info "query params not valid" (assoc error :status 401)))
                            ctx))}))
 
 (defn respond-with [response content-type]
@@ -213,8 +244,7 @@
                    'bones.http.handlers/body-params
                    'bones.http.handlers/check-command-exists
                    'bones.http.handlers/check-args-spec
-                   'bones.http.handlers/renderer
-                   ]
+                   'bones.http.handlers/renderer]
    'bones.http.handlers/command-handler])
 
 (defn command-list-resource [conf]
@@ -229,9 +259,19 @@
                    'bones.http.handlers/body-params ;;shim
                    'bones.http.handlers/check-command-exists ;; :login should be registered
                    'bones.http.handlers/check-args-spec ;; user defined login parameters
-                   'bones.http.handlers/renderer
-                   ]
+                   'bones.http.handlers/renderer]
    'bones.http.handlers/login-handler])
+
+(defn query-resource [conf]
+  [:bones/query
+   ^:interceptors ['bones.http.handlers/error-responder ;; must come first
+                   (cn/negotiate-content ["application/edn"])
+                   'bones.http.handlers/session ;; auth
+                   'bones.http.handlers/identity-interceptor ;; auth
+                   'bones.http.auth/interceptor ;; auth
+                   'bones.http.handlers/check-query-params-spec
+                   'bones.http.handlers/renderer]
+   'bones.http.handlers/query-handler])
 
 (defrecord CQRS [conf]
   component/Lifecycle
@@ -243,7 +283,7 @@
                  ["/command"
                   {:post (command-resource config)
                    :get (command-list-resource config)}]
-                 ;; ["/query"
-                 ;;  {:get (query-resource config)}]
+                 ["/query"
+                  {:get (query-resource config)}]
                  ["/login"
                   {:post (login-resource config)}]]]])))))

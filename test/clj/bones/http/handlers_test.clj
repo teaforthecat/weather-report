@@ -48,11 +48,15 @@
 (defn login-post [body-params]
   (edn-post body-params {} "/api/login"))
 
-(defn edn-get [path]
-  (response-for service
-                :get path
-                :headers {"Content-Type" "application/edn"
-                          "Accept" "application/edn"}))
+(defn edn-get
+  ([path]
+   (edn-get path {}))
+  ([path headers]
+   (response-for service
+                 :get path
+                 :headers (merge {"Content-Type" "application/edn"
+                                  "Accept" "application/edn"}
+                                 headers))))
 
 (def valid-cookie
   ;; session must have identity in it for buddy
@@ -173,3 +177,18 @@
              (edn-body response)))
       (is (= (get (:headers response) "Content-Type") "application/edn"))
       (is (= (:status response) 200)))))
+
+(defn graph [params req]
+  (let [g (-> params :q edn/read-string)]
+    {:graph g}))
+
+(handlers/register-query-handler :graph {:q s/Str} )
+
+(deftest query-resource-test
+  (testing "a valid token or session is required"
+    (let [response (edn-get "/api/query?q=abc" invalid-token)]
+      (is (= 403 (:status response)))))
+  (testing "the query handler can be overwritten by `register-query-handler'"
+    (let [response (edn-get "/api/query?q=abc" valid-token)]
+      (is (= "{:graph abc}" (:body response)))
+      (is (= 200 (:status response))))))
