@@ -235,42 +235,48 @@
   [conf]
   [:bones/command
    ;; need to use namespace so this can be called from a macro (defroutes)
-   ^:interceptors ['bones.http.handlers/error-responder ;; must come first
-                   (cn/negotiate-content ["application/edn"])
-                   'bones.http.handlers/session ;; auth
-                   'bones.http.handlers/identity-interceptor ;; auth
-                   'bones.http.auth/interceptor ;; auth
-                   (body-params/body-params)
-                   'bones.http.handlers/body-params
-                   'bones.http.handlers/check-command-exists
-                   'bones.http.handlers/check-args-spec
-                   'bones.http.handlers/renderer]
+   ^:interceptors ['bones.http.handlers/error-responder       ; request ; must come first
+                   (cn/negotiate-content ["application/edn"]) ; request
+                   'bones.http.handlers/session               ; auth
+                   'bones.http.handlers/identity-interceptor  ; auth
+                   'bones.http.auth/interceptor               ; auth
+                   (body-params/body-params)                  ; post
+                   'bones.http.handlers/body-params           ; post
+                   'bones.http.handlers/check-command-exists  ; command
+                   'bones.http.handlers/check-args-spec       ; command
+                   'bones.http.handlers/renderer              ; response
+                   ]
    'bones.http.handlers/command-handler])
 
 (defn command-list-resource [conf]
+  ;; need to use namespace so this can be called from a macro (defroutes)
   [:bones/command-list (get-resource-interceptors) 'bones.http.handlers/command-list-handler])
 
 (defn login-resource [conf]
+  ;; need to use namespace so this can be called from a macro (defroutes)
   [:bones/login
-   ^:interceptors ['bones.http.handlers/error-responder ;; must come first
-                   (cn/negotiate-content ["application/edn"])
-                   'bones.http.handlers/session ;; auth
-                   (body-params/body-params)
-                   'bones.http.handlers/body-params ;;shim
-                   'bones.http.handlers/check-command-exists ;; :login should be registered
-                   'bones.http.handlers/check-args-spec ;; user defined login parameters
-                   'bones.http.handlers/renderer]
+   ^:interceptors ['bones.http.handlers/error-responder       ; request ; must come first
+                   (cn/negotiate-content ["application/edn"]) ; request
+                   'bones.http.handlers/session               ; auth
+                   (body-params/body-params)                  ; post
+                   'bones.http.handlers/body-params           ; post
+                   'bones.http.handlers/check-command-exists  ; login   ; :login should be registered
+                   'bones.http.handlers/check-args-spec       ; login   ; user defined login parameters
+                   'bones.http.handlers/renderer              ; response
+                   ]
    'bones.http.handlers/login-handler])
 
 (defn query-resource [conf]
+  ;; need to use namespace so this can be called from a macro (defroutes)
   [:bones/query
-   ^:interceptors ['bones.http.handlers/error-responder ;; must come first
-                   (cn/negotiate-content ["application/edn"])
-                   'bones.http.handlers/session ;; auth
-                   'bones.http.handlers/identity-interceptor ;; auth
-                   'bones.http.auth/interceptor ;; auth
-                   'bones.http.handlers/check-query-params-spec
-                   'bones.http.handlers/renderer]
+   ^:interceptors ['bones.http.handlers/error-responder         ; request ; must come first
+                   (cn/negotiate-content ["application/edn"])   ; request
+                   'bones.http.handlers/session                 ; auth
+                   'bones.http.handlers/identity-interceptor    ; auth
+                   'bones.http.auth/interceptor                 ; auth
+                   'bones.http.handlers/check-query-params-spec ; query
+                   'bones.http.handlers/renderer                ; response
+                   ]
    'bones.http.handlers/query-handler])
 
 (defrecord CQRS [conf]

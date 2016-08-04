@@ -11,7 +11,7 @@
             [ring.middleware.session :refer [wrap-session session-request session-response]]
             [ring.middleware.session.store :as store]))
 
-;; add secret to conf
+;; TODO: make all this configurable
 (def secret (nonce/random-bytes 32))
 (def algorithm {:alg :a256kw :enc :a128gcm})
 (def auth-backend (jwe-backend {:secret secret :options algorithm}))
@@ -34,56 +34,15 @@
         claims (assoc data :exp exp)]
     (jwe/encrypt claims secret algorithm)))
 
-(defn session [data]
-  (store/write-session (:store cookie-opts) cookie-secret data))
-
-(defn read-session [sess]
-  (store/read-session (:store cookie-opts) sess))
-
-(comment
-  ;; when copying from the repl output of printing the request, the "=" gets
-  ;; http encoded(?) to %3d
-  (read-session "vRu8o3avetgkDgiLqyCJ6T75m6V8fjt6VnRP3klThvz7ackbHcXLoaMX6izXeT4F--JtGidgQhNx3CmWYeNxWgl1t2mGWjW56pg8KVnAfZ2F8=")
-  (read-session
-   (session {:xyz 123})) ;;=> {:xyz 123}
-  )
-
-;; this must come first
-(defn cookie-session-middleware []
-  " a 16-byte secret key so sessions last across restarts"
-  (wrap-session identity {:store (cookie-store {:key "a 16-byte secret"})
-                         ;; TODO: add :secure true
-                         :cookie-name "bones-session"
-                         :cookie-attrs {:http-only false}}))
-
-
-;; (defn login-handler [username password]
-;;   (let [user-data (check-password username password)]
-;;     (if user-data
-;;       (let [claims {:user user-data
-;;                     :exp (time/plus (time/now) (time/hours 1))}
-;;             token (jwe/encrypt claims secret algorithm)]
-;;         ;;setup both token and cookie
-;;         ;;for /api/events EventSource
-;;         (-> (ok {:token token})
-;;             (update :session merge {:identity {:user user-data}})))
-;;       (bad-request {:message "username or password is invalid"}))))
-
-;; (cookie-session-middleware
-;;  (wrap-authentication
-;;   (eval (cqrs path jobs query-handler))
-;;   auth-backend
-;;   cookie-session-backend)
-;;  )
-
 (def interceptor
   {:name :bones.auth/authentication
    :enter (fn [ctx]
+            ;; maybe check for identity directly here, to make it obvious
             (if (authenticated? (:request ctx))
               ctx
               (throw (ex-info "Not Authenticated" {:status 403}))))})
 
 (defn identity-interceptor []
-  ;; identity as function to hack the ring middleware for pedestal
-  ;; identity also means authentication identity
+  ;; identity above refers to buddy's idea of authentication identity
+  ;; identity below is clojure.core; to hack the ring middleware for pedestal
   (wrap-authentication identity auth-backend cookie-session-backend))
