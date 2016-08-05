@@ -1,6 +1,8 @@
 (ns weather-report.handlers
-    (:require [re-frame.core :as re-frame]
-              [weather-report.db :as db]))
+  (:require [re-frame.core :as re-frame]
+            [weather-report.db :as db]
+            [bones.client :as client]
+            [cljs.core.async :as a]))
 
 (re-frame/register-handler
  :initialize-db
@@ -15,8 +17,17 @@
 (defmulti submit-form (fn [form-id _ _ _] form-id))
 
 (defmethod submit-form :login [form-id db form default-form]
-  (reset! form default-form)
-  (assoc db :bones/logged-in? true))
+  (let [form-data (select-keys @form [:username :password])
+        response  (a/take! (client/post "http://localhost:8080/api/login"
+                                        {:command :login
+                                         :args form-data})
+                           println) ]
+   ;; move to handler
+    (if (= 200 (:status response))
+      (do
+        (reset! form default-form)
+        (assoc db :bones/logged-in? true))
+      (println response))))
 
 (defmethod submit-form :add-account [form-id db form default-form]
   (let [data @form]

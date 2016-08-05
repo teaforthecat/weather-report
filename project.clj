@@ -20,8 +20,9 @@
                  [org.slf4j/jcl-over-slf4j "1.7.21"]
                  [org.slf4j/log4j-over-slf4j "1.7.21"]
 
+                 ;; bones cljs
                  [reagent-forms "0.5.24"]
-                 [ring-mock "0.1.5"]
+                 [cljs-http "0.1.39"]
                  ]
 
   :plugins [[lein-cljsbuild "1.1.3"]]

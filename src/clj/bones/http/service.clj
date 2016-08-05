@@ -9,6 +9,10 @@
    ::http/routes  routes
    ::http/resource-path (or (:resource-path conf) "/public")
    ::http/type :jetty
+   ::http/allowed-origins {:allowed-origins #(some #{"http://localhost:8080"
+                                                     "http://localhost:3449"}
+                                                  [%])
+                           :creds true}
    ::http/port (or (:port conf) 8080)
    ::http/container-options {:h2c? true
                              :h2? false

@@ -1,11 +1,17 @@
 (ns weather-report.core
   (:gen-class)
   (require [com.stuartsierra.component :as component]
+           [schema.core :as s]
            [bones.http.service :as service]
            [bones.http.handlers :as handlers]
            [bones.conf :as conf]))
 
 (def sys (atom {}))
+(defn login [args req]
+  ;; {:user-id 123 :roles ["tester"]})
+  true)
+
+(handlers/register-command :login {:username s/Str :password s/Str} )
 
 (defn init-system []
   ;; note: this could also be a Conf component
