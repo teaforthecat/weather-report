@@ -25,9 +25,12 @@
     db))
 
 (defmethod submit-form :add-account [form-id db form default-form]
-  (let [data @form]
-    (reset! form default-form)
-    (update db :accounts conj data)))
+  (let [form-data (select-keys @form [:account/xact-id :account/evo-id])]
+    (a/take! (client/post "http://localhost:8080/api/command"
+                          {:command :add-account
+                           :args form-data})
+             #(re-frame/dispatch [:add-account-handler % form default-form]))
+    db))
 
 (re-frame/register-handler
  :submit-form
@@ -47,5 +50,17 @@
        (reset! form default-form)
        (assoc db :bones/logged-in? true))
      (do
+       (println response)
+       db))))
+
+(re-frame/register-handler
+ :add-account-handler
+ (fn [db [_ response form default-form]]
+   (if (= 200 (:status response))
+     (let [data @form]
+       (reset! form default-form)
+       (update db :accounts conj data))
+     (do
+       (swap! form assoc :errors (:body response))
        (println response)
        db))))

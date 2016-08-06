@@ -21,7 +21,9 @@
   {:store (cookie-store {:key cookie-secret})
    ;; TODO: add :secure true
    :cookie-name "bones-session"
-   :cookie-attrs {:http-only false}})
+   :cookie-attrs {:http-only false
+                  ;; one year
+                  :max-age (* 60 60 24 365)}})
 
 (defn encrypt-password [password]
   (hashers/encrypt password {:alg :bcrypt+blake2b-512}))
@@ -40,7 +42,7 @@
             ;; maybe check for identity directly here, to make it obvious
             (if (authenticated? (:request ctx))
               ctx
-              (throw (ex-info "Not Authenticated" {:status 403}))))})
+              (throw (ex-info "Not Authenticated" {:status 401}))))})
 
 (defn identity-interceptor []
   ;; identity above refers to buddy's idea of authentication identity

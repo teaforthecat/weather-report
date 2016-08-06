@@ -7,7 +7,6 @@
             [io.pedestal.http :as bootstrap]
             [io.pedestal.http.route.definition :refer [defroutes]]
             [bones.http.service :as service]
-            [ring.mock.request :as mock]
             [ring.middleware.session.store :as store]
             [ring.util.codec :as codec]
             [schema.core :as s]
@@ -81,13 +80,13 @@
           response (edn-post body-params invalid-token)]
       (is (= "{:message \"Not Authenticated\"}" (:body response)))
       (is (= "application/edn"  (get (:headers response)  "Content-Type")))
-      (is (= 403 (:status response)))))
+      (is (= 401 (:status response)))))
 
   (testing "non-existant args"
     (let [response (edn-post {:command :echo #_no-args} valid-token)]
       (is (= "{:message \"args not valid\", :data {:args missing-required-key}}" (:body response)))
       (is (= (get (:headers response) "Content-Type") "application/edn"))
-      (is (= (:status response) 401))))
+      (is (= (:status response) 400))))
 
   (testing "non-existant command"
     (let [response (edn-post {:command :nuthin} valid-token)]
@@ -96,13 +95,13 @@
                      :available-commands '(:echo :hello :thrower :login)}}
              (edn-body response)))
       (is (= (get (:headers response) "Content-Type") "application/edn"))
-      (is (= (:status response) 401))))
+      (is (= (:status response) 400))))
 
   (testing "args that are something other than a map"
     (let [response (edn-post {:command :echo :args [:not :a-map]} valid-token)]
       (is (= "{:message \"args not valid\", :data {:args (not (map? [:not :a-map]))}}" (:body response)))
       (is (= (get (:headers response) "Content-Type") "application/edn"))
-      (is (= (:status response) 401))))
+      (is (= (:status response) 400))))
 
   (testing "built-in echo command with valid args"
     (let [response (edn-post {:command :echo :args {:yes :allowed}} valid-token)]
@@ -144,7 +143,7 @@
       (is (contains? (edn-body response) :token))))
   (testing "no session is set if login command returns nil"
     (let [response (login-post invalid-login)]
-      (is (= 422 (:status response)))
+      (is (= 400 (:status response)))
       (is (not (contains? (:headers response) "Set-Cookie")))
       (is (= {:message "Invalid Credentials"} (edn-body response)))
       (is (= (get (:headers response) "Content-Type") "application/edn")))))
@@ -177,7 +176,7 @@
   ;; given the registered query handler above
   (testing "a valid token or session is required"
     (let [response (edn-get "/api/query?q=abc" invalid-token)]
-      (is (= 403 (:status response)))))
+      (is (= 401 (:status response)))))
   (testing "the query handler can be overwritten by `register-query-handler'"
     (let [response (edn-get "/api/query?q=abc" valid-token)]
       (is (= "{:graph abc}" (:body response)))
@@ -185,4 +184,4 @@
   (testing "the query gets checked against the schema"
     (let [response (edn-get "/api/query?something=else" valid-token)]
       (is (= "{:message \"query params not valid\", :data {:q missing-required-key, :something disallowed-key}}" (:body response)))
-      (is (= 401 (:status response))))))
+      (is (= 400 (:status response))))))

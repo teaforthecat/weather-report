@@ -120,8 +120,8 @@
       (if user-data
         {:session {:identity user-data}
          :token (auth/token {:identity user-data})}
-        (throw (ex-info "Invalid Credentials" {:status 422}))))
-    (throw (ex-info "Invalid Command" {:status 401}))))
+        (throw (ex-info "Invalid Credentials" {:status 400}))))
+    (throw (ex-info "Invalid Command" {:status 400}))))
 
 ;; todo register multiple query handlers somehow
 ;; remove?
@@ -153,7 +153,7 @@
                            (if (some #{cmd} commands)
                              ctx ;;do nothing
                              (throw (ex-info "command not found"
-                                             {:status 401
+                                             {:status 400
                                               :message (str "command not found: " cmd)
                                               :available-commands commands})))))}))
 
@@ -161,14 +161,14 @@
   (interceptor {:name :bones/check-args-spec
                 :enter (fn [ctx]
                          (if-let [error (s/check Command (body ctx))]
-                           (throw (ex-info "args not valid" (assoc error :status 401)))
+                           (throw (ex-info "args not valid" (assoc error :status 400)))
                            ctx))}))
 
 (def check-query-params-spec
   (interceptor {:name :bones/check-query-params-spec
                 :enter (fn [ctx]
                          (if-let [error (s/check Query (get-in ctx [:request :query-params] {}))]
-                           (throw (ex-info "query params not valid" (assoc error :status 401)))
+                           (throw (ex-info "query params not valid" (assoc error :status 400)))
                            ctx))}))
 
 (defn respond-with [response content-type]

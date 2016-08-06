@@ -11,7 +11,14 @@
   ;; {:user-id 123 :roles ["tester"]})
   true)
 
-(handlers/register-command :login {:username s/Str :password s/Str} )
+(handlers/register-command :login {:username s/Str
+                                   :password s/Str})
+
+(defn add-account [args req]
+  args)
+
+(handlers/register-command :add-account {:account/xact-id s/Int
+                                         :account/evo-id (s/maybe s/Int)})
 
 (defn init-system []
   ;; note: this could also be a Conf component
