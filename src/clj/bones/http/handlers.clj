@@ -2,22 +2,16 @@
   (:require [com.stuartsierra.component :as component]
             [clojure.string :as string]
             [clojure.edn :as edn]
-            ;; [byte-streams :refer [def-conversion]]
             [schema.experimental.abstract-map :as abstract-map]
-            [schema.coerce :as sc]
             [schema.core :as s]
             ;;ped
             [io.pedestal.http.route :as route]
-            [io.pedestal.http.route.definition.table :as table]
-            [io.pedestal.http.route.definition :refer [defroutes]]
             [io.pedestal.interceptor :refer [interceptor]]
             [io.pedestal.http.ring-middlewares :as middlewares]
             [io.pedestal.http.content-negotiation :as cn]
             [io.pedestal.http.body-params :as body-params]
-            [io.pedestal.interceptor.helpers :as helpers :refer [definterceptor]]
-            [io.pedestal.interceptor.error :refer [error-dispatch]]
+            [io.pedestal.interceptor.helpers :as helpers]
             [ring.util.response :as ring-resp]
-            [ring.middleware.session.cookie :refer [cookie-store]]
             [bones.http.auth :as auth]))
 
 (s/defschema Command
@@ -114,14 +108,24 @@
 (defn command-list-handler [_]
   {:available-commands (registered-commands)})
 
+(defn token-interceptor [sheild]
+  (interceptor {:name :bones/token-interceptor
+                :leave (fn [ctx]
+                         ;; assuming authentic user data in response
+                         ;; returned from registered :login command
+                         ;; the session ends up in a Set-Cookie header
+                         ;; the token ends up in the response body
+                         (let [user-data (:response ctx)]
+                           (assoc ctx :response {:session {:identity user-data}
+                                                 :token (auth/token sheild user-data)})))}))
+
 (defn login-handler [req]
-  (if (= :login (get-in req [:body-params :command]))
-    (let [user-data (command (:body-params req) req)]
-      (if user-data
-        {:session {:identity user-data}
-         :token (auth/token {:identity user-data})}
-        (throw (ex-info "Invalid Credentials" {:status 400}))))
-    (throw (ex-info "Invalid Command" {:status 400}))))
+    (if (= :login (get-in req [:body-params :command]))
+      (let [user-data (command (:body-params req) req)]
+        (if user-data
+          user-data
+          (throw (ex-info "Invalid Credentials" {:status 400}))))
+      (throw (ex-info "Invalid Command" {:status 400}))))
 
 ;; todo register multiple query handlers somehow
 ;; remove?
@@ -133,17 +137,17 @@
 (defn query-handler [req]
   (query (:query-params req) req))
 
-(def identity-interceptor
+(defn identity-interceptor [sheild]
   ;; sets request :identity to data of decrypted "Token" in the "Authorization" header
   ;; sets request :identity to data of :identity in bones-session cookie
   (helpers/on-request :bones.auth/identity
-                      (auth/identity-interceptor)))
+                      (auth/identity-interceptor sheild)))
 
-(def session
+(defn session [sheild]
   ;; interceptor
   ;; sets request :session to decrypted data in the bones-session cookie
   ;; sets cookie to encrypted value of data in request :session
-  (middlewares/session auth/cookie-opts))
+  (middlewares/session (:cookie-opts sheild)))
 
 (def check-command-exists
   (interceptor {:name :bones/check-command-exists
@@ -232,14 +236,14 @@
     * requires exclusively `:command' and `:args' keys in post body
     * hands off `:args' of post body to `:command'
     * commands are registered with `register-command'"
-  [conf]
+  [conf sheild]
   [:bones/command
    ;; need to use namespace so this can be called from a macro (defroutes)
    ^:interceptors ['bones.http.handlers/error-responder       ; request ; must come first
                    (cn/negotiate-content ["application/edn"]) ; request
-                   'bones.http.handlers/session               ; auth
-                   'bones.http.handlers/identity-interceptor  ; auth
-                   'bones.http.auth/interceptor               ; auth
+                   (bones.http.handlers/session sheild)                 ; auth
+                   (bones.http.handlers/identity-interceptor sheild)    ; auth
+                   'bones.http.auth/check-authenticated               ; auth
                    (body-params/body-params)                  ; post
                    'bones.http.handlers/body-params           ; post
                    'bones.http.handlers/check-command-exists  ; command
@@ -248,48 +252,55 @@
                    ]
    'bones.http.handlers/command-handler])
 
-(defn command-list-resource [conf]
+(defn command-list-resource [conf sheild]
   ;; need to use namespace so this can be called from a macro (defroutes)
   [:bones/command-list (get-resource-interceptors) 'bones.http.handlers/command-list-handler])
 
-(defn login-resource [conf]
+(defn login-resource [conf sheild]
   ;; need to use namespace so this can be called from a macro (defroutes)
   [:bones/login
    ^:interceptors ['bones.http.handlers/error-responder       ; request ; must come first
                    (cn/negotiate-content ["application/edn"]) ; request
-                   'bones.http.handlers/session               ; auth
+                   (bones.http.handlers/session sheild)                 ; auth
                    (body-params/body-params)                  ; post
                    'bones.http.handlers/body-params           ; post
                    'bones.http.handlers/check-command-exists  ; login   ; :login should be registered
                    'bones.http.handlers/check-args-spec       ; login   ; user defined login parameters
                    'bones.http.handlers/renderer              ; response
+                   (bones.http.handlers/token-interceptor sheild) ;; before response
                    ]
    'bones.http.handlers/login-handler])
 
-(defn query-resource [conf]
+(defn query-resource [conf sheild]
   ;; need to use namespace so this can be called from a macro (defroutes)
   [:bones/query
    ^:interceptors ['bones.http.handlers/error-responder         ; request ; must come first
                    (cn/negotiate-content ["application/edn"])   ; request
-                   'bones.http.handlers/session                 ; auth
-                   'bones.http.handlers/identity-interceptor    ; auth
-                   'bones.http.auth/interceptor                 ; auth
+                   (bones.http.handlers/session sheild)                 ; auth
+                   (bones.http.handlers/identity-interceptor sheild)    ; auth
+                   'bones.http.auth/check-authenticated                 ; auth
                    'bones.http.handlers/check-query-params-spec ; query
                    'bones.http.handlers/renderer                ; response
                    ]
    'bones.http.handlers/query-handler])
 
-(defrecord CQRS [conf]
+(defrecord CQRS [conf sheild]
   component/Lifecycle
   (start [cmp]
-    (let [config (get-in cmp [:conf :http/handlers])]
-      (assoc cmp :routes
-             (io.pedestal.http.route/expand-routes
-              [[[(or (:mount-path config) "/api")
-                 ["/command"
-                  {:post (command-resource config)
-                   :get (command-list-resource config)}]
-                 ["/query"
-                  {:get (query-resource config)}]
-                 ["/login"
-                  {:post (login-resource config)}]]]])))))
+    (let [config (get-in cmp [:conf :http/handlers])
+          auth-config (get-in cmp [:conf :http/auth])
+          sheild (.start (auth/map->Sheild auth-config))]
+      ;; not using component injection with sheild in order
+      ;; to keep the ux slim
+      (-> cmp
+          (assoc :sheild sheild)
+          (assoc :routes
+                 (route/expand-routes
+                  [[[(or (:mount-path config) "/api")
+                     ["/command"
+                      {:post (command-resource config sheild)
+                       :get (command-list-resource config sheild)}]
+                     ["/query"
+                      {:get (query-resource config sheild)}]
+                     ["/login"
+                      {:post (login-resource config sheild)}]]]]))))))

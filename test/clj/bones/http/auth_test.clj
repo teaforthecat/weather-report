@@ -5,35 +5,37 @@
             [ring.util.codec :as codec]
             [clojure.test :refer [deftest testing is]]))
 
-(defn session [data]
-  (store/write-session (:store auth/cookie-opts) auth/cookie-secret data))
+(defn session [sheild data]
+  (let [{:keys [cookie-opts cookie-secret]} sheild]
+    (store/write-session (:store cookie-opts) cookie-secret data)))
 
-(defn read-session [sess]
-  (store/read-session (:store auth/cookie-opts) sess))
+(defn read-session [sheild sess]
+  (let [{:keys [cookie-opts]} sheild]
+    (store/read-session (:store cookie-opts) sess)))
 
 (def session-info {:identity {:xyz 123}})
 
 (deftest request-session
-  (testing "given an empty request and response, sets identity to nil"
-    (let [req ((auth/identity-interceptor) {} )]
-      (is (= {:identity nil} req))))
+  (let [sheild (.start (auth/map->Sheild {}))]
+    (testing "given an empty request and response, sets identity to nil"
+      (let [req ((auth/identity-interceptor sheild) {} )]
+        (is (= {:identity nil} req))))
+    (testing "session is readable and writable"
+      (is (= (read-session sheild (session sheild session-info)) session-info)))))
 
-  (testing "extracts identity from session"
-    (let [valid-request {:session {:identity 123}}
-          req ((auth/identity-interceptor) valid-request)]
-      (is (= {:session {:identity 123} :identity 123} req))))
 
-  (testing "extracts data from token to identity"
-    (let [valid-request {:headers {"Authorization" (str "Token " (auth/token {:xyz 123}))}}
-          req ((auth/identity-interceptor) valid-request)]
-      (is (= 123 (get-in req [:identity :xyz])))))
-
-  (testing "session is readable and writable"
-    (is (= (read-session (session session-info)) session-info)))
-
-  (testing "extracts data from cookie to identity"
-    (let [value (session session-info)
-          valid-request {:headers {"cookie" (codec/form-encode {"bones-session" value})}}
-          req ((auth/identity-interceptor)
-               (session-request valid-request auth/cookie-opts))]
-      (is (= 123 (get-in req [:identity :xyz]))))))
+(deftest test-sheild
+  (testing "workable defaults"
+    (let [sheild (.start (auth/map->Sheild {}))]
+      (testing "extacts data from token to identity"
+        ;; all token data ends up in :identity
+        (let [valid-request {:headers {"authorization" (str "Token " (.token sheild {:xyz 123}))}}
+              req ((auth/identity-interceptor sheild) valid-request)]
+          (is (= 123 (get-in req [:identity :xyz])))))
+      (testing "extracts data from cookie to identity"
+        ;; session data must have data within :identity
+        (let [value (session sheild session-info)
+              valid-request {:headers {"cookie" (codec/form-encode {"bones-session" value})}}
+              req ((auth/identity-interceptor sheild)
+                   (session-request valid-request (:cookie-opts sheild)))]
+          (is (= 123 (get-in req [:identity :xyz]))))))))

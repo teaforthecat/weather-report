@@ -1,6 +1,6 @@
 (ns bones.http.handlers-test
   (:require [bones.http.handlers :as handlers]
-            [bones.http.auth :as auth :refer [token]]
+            [bones.http.auth :as auth]
             [clojure.test :refer [deftest testing is]]
             [clojure.edn :as edn]
             [io.pedestal.test :refer [response-for]]
@@ -12,10 +12,9 @@
             [schema.core :as s]
             ))
 
-(defn edn-body [{:keys [body]}]
-  (-> body edn/read-string))
-
-(def routes (-> (handlers/map->CQRS {}) .start :routes))
+(def cqrs (.start (handlers/map->CQRS {})))
+(def routes (:routes cqrs))
+(def sheild (:sheild cqrs))
 
 (def service
   (::bootstrap/service-fn (bootstrap/create-servlet (service/service routes {}))))
@@ -45,9 +44,11 @@
                  :headers (merge {"Content-Type" "application/edn"
                                   "Accept" "application/edn"}
                                  headers))))
+(defn edn-body [{:keys [body]}]
+  (-> body edn/read-string))
 
 (def valid-token
-  {"authorization" (str "Token " (token {:identity {:user-d 123}}))})
+  {"authorization" (str "Token " (auth/token sheild {:identity {:user-d 123}}))})
 
 (def invalid-token
   {"authorization" "Token nuthin"})
@@ -62,12 +63,14 @@
     (is (thrown? clojure.lang.ExceptionInfo
                  (handlers/register-command :nope {})))))
 
+;; pretend command handler
 (defn hello [args req]
   (let [who (get-in args [:who])]
     {:greeting (str "hello " who)}))
 
 (handlers/register-command :hello {:who s/Str})
 
+;; pretend command handler
 (defn thrower [args req]
   (throw (ex-info "something fake" {:other "stuff" :status 555})))
 
@@ -85,8 +88,8 @@
   (testing "non-existant args"
     (let [response (edn-post {:command :echo #_no-args} valid-token)]
       (is (= "{:message \"args not valid\", :data {:args missing-required-key}}" (:body response)))
-      (is (= (get (:headers response) "Content-Type") "application/edn"))
-      (is (= (:status response) 400))))
+      (is (= "application/edn" (get "Content-Type" (:headers response))))
+      (is (= 400 (:status response) ))))
 
   (testing "non-existant command"
     (let [response (edn-post {:command :nuthin} valid-token)]
@@ -94,35 +97,36 @@
               :data {:message "command not found: :nuthin"
                      :available-commands '(:echo :hello :thrower :login)}}
              (edn-body response)))
-      (is (= (get (:headers response) "Content-Type") "application/edn"))
-      (is (= (:status response) 400))))
+      (is (= "application/edn" (get (:headers response) "Content-Type")))
+      (is (= 400 (:status response)))))
 
   (testing "args that are something other than a map"
     (let [response (edn-post {:command :echo :args [:not :a-map]} valid-token)]
       (is (= "{:message \"args not valid\", :data {:args (not (map? [:not :a-map]))}}" (:body response)))
-      (is (= (get (:headers response) "Content-Type") "application/edn"))
-      (is (= (:status response) 400))))
+      (is (= "application/edn" (get (:headers response) "Content-Type")))
+      (is (= 400 (:status response)))))
 
   (testing "built-in echo command with valid args"
     (let [response (edn-post {:command :echo :args {:yes :allowed}} valid-token)]
-      (is (= (:body response) "{:yes :allowed}"))
-      (is (= (get (:headers response) "Content-Type") "application/edn"))
-      (is (= (:status response) 200))))
+      (is (= "{:yes :allowed}" (:body response)))
+      (is (= "application/edn" (get (:headers response) "Content-Type")))
+      (is (= 200 (:status response)))))
 
   (testing "registered command with valid args"
     (let [body-params {:command :hello :args {:who "mr teapot"}}
           response (edn-post body-params valid-token)]
-      (is (= (:body response) "{:greeting \"hello mr teapot\"}"))
-      (is (= (get (:headers response) "Content-Type") "application/edn"))
-      (is (= (:status response) 200))))
+      (is (= "{:greeting \"hello mr teapot\"}" (:body response)))
+      (is (= "application/edn" (get (:headers response) "Content-Type")))
+      (is (= 200 (:status response)))))
 
   (testing "an exception's ex-data gets rendered and status gets used"
     (let [body-params {:command :thrower :args {:what :blowup}}
           response (edn-post body-params valid-token)]
-      (is (= (get (:headers response) "Content-Type") "application/edn"))
+      (is (= "application/edn" (get (:headers response) "Content-Type")))
       (is (= "{:message \"something fake\", :data {:other \"stuff\"}}" (:body response)))
       (is (= 555 (:status response))))))
 
+;; pretend command handler
 (defn login [args req]
   (if (= "shortandstout" (:password args))
     {:user-id 123 :role "appliance"}))
@@ -163,9 +167,10 @@
                                            :password java.lang.String}
                                     :command (enum :login)})}
              (edn-body response)))
-      (is (= (get (:headers response) "Content-Type") "application/edn"))
-      (is (= (:status response) 200)))))
+      (is (= "application/edn" (get (:headers response) "Content-Type")))
+      (is (= 200 (:status response))))))
 
+;; pretend query handler
 (defn graph [params req]
   (let [g (-> params :q edn/read-string)]
     {:graph g}))
@@ -181,7 +186,7 @@
     (let [response (edn-get "/api/query?q=abc" valid-token)]
       (is (= "{:graph abc}" (:body response)))
       (is (= 200 (:status response)))))
-  (testing "the query gets checked against the schema"
+  (testing "the query params gets checked against the schema"
     (let [response (edn-get "/api/query?something=else" valid-token)]
       (is (= "{:message \"query params not valid\", :data {:q missing-required-key, :something disallowed-key}}" (:body response)))
       (is (= 400 (:status response))))))
