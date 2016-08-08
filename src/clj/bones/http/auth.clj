@@ -12,21 +12,6 @@
             [ring.middleware.session.store :as store]
             [com.stuartsierra.component :as component]))
 
-;; TODO: make all this configurable
-(def secret (nonce/random-bytes 32))
-(def algorithm {:alg :a256kw :enc :a128gcm})
-(def auth-backend (jwe-backend {:secret secret :options algorithm}))
-(def cookie-session-backend (session-backend))
-(def cookie-secret "a 16-byte secret")
-(def cookie-opts
-  {:store (cookie-store {:key cookie-secret})
-   ;; TODO: add :secure true
-   :cookie-name "bones-session"
-   :cookie-attrs {:http-only false
-                  ;; one year
-                  ;; TODO: confirm required for browser to send in ajax call?
-                  :max-age (* 60 60 24 365)}})
-
 (defn encrypt-password [password]
   (hashers/encrypt password {:alg :bcrypt+blake2b-512}))
 
@@ -90,13 +75,7 @@
           (assoc :algorithm algorithm)
           (assoc :cookie-backend (session-backend))
           (assoc :cookie-opts {:store (cookie-store {:key cookie-secret})
-                               ;; TODO: add :secure true
                                :cookie-name cookie-name
                                :cookie-attrs {:http-only false
                                               :secure cookie-https-only
-                                              ;; TODO: confirm expiration is required for browser to send in ajax call?
-                                              :max-age cookie-max-age}})
-         ))))
-
-(comment
-  (.start (Sheild. {})))
+                                              :max-age cookie-max-age}})))))

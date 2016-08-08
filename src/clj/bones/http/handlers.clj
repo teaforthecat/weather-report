@@ -139,13 +139,13 @@
 
 (defn identity-interceptor [sheild]
   ;; sets request :identity to data of decrypted "Token" in the "Authorization" header
-  ;; sets request :identity to data of :identity in bones-session cookie
+  ;; sets request :identity to data of :identity in session cookie
   (helpers/on-request :bones.auth/identity
                       (auth/identity-interceptor sheild)))
 
 (defn session [sheild]
   ;; interceptor
-  ;; sets request :session to decrypted data in the bones-session cookie
+  ;; sets request :session to decrypted data in the session cookie
   ;; sets cookie to encrypted value of data in request :session
   (middlewares/session (:cookie-opts sheild)))
 
@@ -239,16 +239,16 @@
   [conf sheild]
   [:bones/command
    ;; need to use namespace so this can be called from a macro (defroutes)
-   ^:interceptors ['bones.http.handlers/error-responder       ; request ; must come first
-                   (cn/negotiate-content ["application/edn"]) ; request
-                   (bones.http.handlers/session sheild)                 ; auth
-                   (bones.http.handlers/identity-interceptor sheild)    ; auth
-                   'bones.http.auth/check-authenticated               ; auth
-                   (body-params/body-params)                  ; post
-                   'bones.http.handlers/body-params           ; post
-                   'bones.http.handlers/check-command-exists  ; command
-                   'bones.http.handlers/check-args-spec       ; command
-                   'bones.http.handlers/renderer              ; response
+   ^:interceptors ['bones.http.handlers/error-responder              ; request ; must come first
+                   (cn/negotiate-content ["application/edn"])        ; request
+                   (bones.http.handlers/session sheild)              ; auth
+                   (bones.http.handlers/identity-interceptor sheild) ; auth
+                   'bones.http.auth/check-authenticated              ; auth
+                   (body-params/body-params)                         ; post
+                   'bones.http.handlers/body-params                  ; post
+                   'bones.http.handlers/check-command-exists         ; command
+                   'bones.http.handlers/check-args-spec              ; command
+                   'bones.http.handlers/renderer                     ; response
                    ]
    'bones.http.handlers/command-handler])
 
@@ -259,28 +259,28 @@
 (defn login-resource [conf sheild]
   ;; need to use namespace so this can be called from a macro (defroutes)
   [:bones/login
-   ^:interceptors ['bones.http.handlers/error-responder       ; request ; must come first
-                   (cn/negotiate-content ["application/edn"]) ; request
-                   (bones.http.handlers/session sheild)                 ; auth
-                   (body-params/body-params)                  ; post
-                   'bones.http.handlers/body-params           ; post
-                   'bones.http.handlers/check-command-exists  ; login   ; :login should be registered
-                   'bones.http.handlers/check-args-spec       ; login   ; user defined login parameters
-                   'bones.http.handlers/renderer              ; response
-                   (bones.http.handlers/token-interceptor sheild) ;; before response
+   ^:interceptors ['bones.http.handlers/error-responder           ; request ; must come first
+                   (cn/negotiate-content ["application/edn"])     ; request
+                   (bones.http.handlers/session sheild)           ; auth
+                   (body-params/body-params)                      ; post
+                   'bones.http.handlers/body-params               ; post
+                   'bones.http.handlers/check-command-exists      ; login   ; :login should be registered
+                   'bones.http.handlers/check-args-spec           ; login   ; user defined login parameters
+                   'bones.http.handlers/renderer                  ; response
+                   (bones.http.handlers/token-interceptor sheild) ; response ; before response
                    ]
    'bones.http.handlers/login-handler])
 
 (defn query-resource [conf sheild]
   ;; need to use namespace so this can be called from a macro (defroutes)
   [:bones/query
-   ^:interceptors ['bones.http.handlers/error-responder         ; request ; must come first
-                   (cn/negotiate-content ["application/edn"])   ; request
-                   (bones.http.handlers/session sheild)                 ; auth
-                   (bones.http.handlers/identity-interceptor sheild)    ; auth
-                   'bones.http.auth/check-authenticated                 ; auth
-                   'bones.http.handlers/check-query-params-spec ; query
-                   'bones.http.handlers/renderer                ; response
+   ^:interceptors ['bones.http.handlers/error-responder              ; request ; must come first
+                   (cn/negotiate-content ["application/edn"])        ; request
+                   (bones.http.handlers/session sheild)              ; auth
+                   (bones.http.handlers/identity-interceptor sheild) ; auth
+                   'bones.http.auth/check-authenticated              ; auth
+                   'bones.http.handlers/check-query-params-spec      ; query
+                   'bones.http.handlers/renderer                     ; response
                    ]
    'bones.http.handlers/query-handler])
 
