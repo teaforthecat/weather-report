@@ -288,16 +288,15 @@
   component/Lifecycle
   (start [cmp]
     (let [config (get-in cmp [:conf :http/handlers])
-          shield (:shield cmp)]
+          auth-sheild (:shield cmp)]
       (-> cmp
-          ;; (assoc :shield shield)
           (assoc :routes
                  (route/expand-routes
                   [[[(or (:mount-path config) "/api")
                      ["/command"
-                      {:post (command-resource config shield)
-                       :get (command-list-resource config shield)}]
+                      {:post (command-resource config auth-sheild)
+                       :get (command-list-resource config auth-sheild)}]
                      ["/query"
-                      {:get (query-resource config shield)}]
+                      {:get (query-resource config auth-sheild)}]
                      ["/login"
-                      {:post (login-resource config shield)}]]]]))))))
+                      {:post (login-resource config auth-sheild)}]]]]))))))

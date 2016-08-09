@@ -30,7 +30,6 @@
   ;; identity above refers to buddy's idea of authentication identity
   ;; identity below is clojure.core; to hack the ring middleware for pedestal
   (let [{:keys [token-backend cookie-backend]} shield]
-    ;; (fn [])
     (wrap-authentication identity token-backend cookie-backend)))
 
 (defn validate-cookie-secret [cookie-secret]

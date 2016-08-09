@@ -12,10 +12,10 @@
             [schema.core :as s]
             ))
 
-(def conf {:http/auth {:secret "1234"
+(def conf {:http/auth {:secret  (apply str (map char (range 32)))
                        :cookie-name "pizza"}})
-(def shield (.start (auth/map->Shield conf)))
-(def cqrs (.start (handlers/map->CQRS {:sheild shield})))
+(def shield (.start (auth/map->Shield {:conf conf})))
+(def cqrs (.start (handlers/map->CQRS {:shield shield})))
 (def routes (:routes cqrs))
 (def service
   (::bootstrap/service-fn (bootstrap/create-servlet (service/service routes {}))))
@@ -89,8 +89,8 @@
   (testing "non-existant args"
     (let [response (edn-post {:command :echo #_no-args} valid-token)]
       (is (= "{:message \"args not valid\", :data {:args missing-required-key}}" (:body response)))
-      (is (= "application/edn" (get "Content-Type" (:headers response))))
-      (is (= 400 (:status response) ))))
+      (is (= "application/edn" (get (:headers response) "Content-Type")))
+      (is (= 400 (:status response)))))
 
   (testing "non-existant command"
     (let [response (edn-post {:command :nuthin} valid-token)]
