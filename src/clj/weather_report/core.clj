@@ -8,8 +8,7 @@
 
 (def sys (atom {}))
 (defn login [args req]
-  ;; {:user-id 123 :roles ["tester"]})
-  true)
+  {:user-id 123 :roles ["tester"]})
 
 (handlers/register-command :login {:username s/Str
                                    :password s/Str})
@@ -19,6 +18,9 @@
 
 (handlers/register-command :add-account {:account/xact-id s/Int
                                          :account/evo-id (s/maybe s/Int)})
+
+(def conf {:http/auth {:secret "a 16 byte stringa 32 byte string"}})
+
 
 (defn init-system []
   ;; note: this could also be a Conf component

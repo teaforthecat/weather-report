@@ -6,14 +6,14 @@
 ;; to block caller indefinitely add:
 ;; {:http/service {:join? true}}
 (def sys (atom {}))
-(def conf {:http/auth {:secret "1234"
-                       :cookie-name "pizza"
-                       :cookie-secret "a 16 byte string"}})
+(def conf {:http/auth
+           {:secret "a 16 byte stringa 32 byte string"
+            :cookie-name "pizza"}})
 
 (deftest start-system
   (testing "shield gets created and used by routes"
     (http/build-system sys conf)
     (http/start-system sys)
-    (is (= "1234" (apply str (map char  (get-in @sys [:routes :shield :secret])))))
+    (is (= "a 16 byte stringa 32 byte string" (get-in @sys [:routes :shield :secret])))
     (is (= "pizza" (get-in @sys [:routes :shield :cookie-opts :cookie-name])))
     (http/stop-system sys)))

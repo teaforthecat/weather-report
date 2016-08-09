@@ -32,9 +32,40 @@
   (let [{:keys [token-backend cookie-backend]} shield]
     (wrap-authentication identity token-backend cookie-backend)))
 
-(defn validate-cookie-secret [cookie-secret]
-  (assert (= 16 (count cookie-secret))
-          (str  "ring.middleware.session.cookie says the secret key must be exactly 16 bytes(characters); " (format "%s is %d" (pr-str cookie-secret) (count cookie-secret))) ))
+;; thanks! apiga http://stackoverflow.com/a/37356673/714357
+(defn gen-secret
+  "printable secret, so it can be put into a text file"
+  ([] (gen-secret 32))
+  ([n]
+   (let [chars-between #(map char (range (int %1) (inc (int %2))))
+         chars (concat (chars-between \0 \9)
+                       (chars-between \a \z)
+                       (chars-between \A \Z)
+                       [\_])
+         secret (take n (repeatedly #(rand-nth chars)))]
+     (reduce str secret))))
+
+(defn limited-secret [secret n]
+  (->> secret
+       (take n)
+       (map char)
+       (apply str)))
+
+(defn validate-secret [secret algorithm]
+  ;; taken from buddy.sign.jwe.cek in order to raise the alarms early
+  ;; other algorithms don't have this constraint
+  (let [n (get {:a128kw 16
+                :a192kw 24
+                :a256kw 32} algorithm)]
+    (if n
+      (assert (= n (count secret))
+              (str "buddy.sign.jwe.cek says the secret key must "
+                   (format  "be exactly %n bytes(characters); " n)
+                   (format "%s is %d" (pr-str secret) (count secret))))
+      (assert (> 16 (count secret))
+              (str "secret to short; at least 16 bytes(characters) "
+                   "needed to satisfy ring.middleware.session.cookie; "
+                   (format "%s is %d" (pr-str secret) (count secret)))))))
 
 (defprotocol Token
   (token [this data]))
@@ -56,22 +87,22 @@
     (let [config (get-in cmp [:conf :http/auth])
           {:keys [secret
                   algorithm
-                  cookie-secret
                   cookie-name
+                  cookie-secret
                   cookie-https-only
                   cookie-max-age
                   token-exp-hours
                   token-exp-ever?]
-           :or {secret (nonce/random-bytes 32)
+           :or {secret (gen-secret 32)
                 algorithm {:alg :a256kw :enc :a128gcm}
-                cookie-secret (nonce/random-bytes 16) ;; "a 16-byte secret"
                 cookie-name "bones-session"
+                cookie-secret (limited-secret secret 16)
                 cookie-https-only false
                 cookie-max-age (* 60 60 24 365) ;; one year
                 token-exp-hours (* 24 365) ;; one year
                 token-exp-ever? false
                 }} config]
-      (validate-cookie-secret cookie-secret)
+      (validate-secret secret (:alg algorithm))
       (-> cmp
           (assoc :secret secret)
           (assoc :token-backend (jwe-backend {:secret secret :options algorithm}))
@@ -79,6 +110,7 @@
           (assoc :token-exp-hours token-exp-hours)
           (assoc :algorithm algorithm)
           (assoc :cookie-backend (session-backend))
+          ;; ring.middleware.session.cookie says the secret key must be exactly 16 bytes(characters)
           (assoc :cookie-opts {:store (cookie-store {:key cookie-secret})
                                :cookie-name cookie-name
                                :cookie-attrs {:http-only false
