@@ -12,10 +12,11 @@
             [schema.core :as s]
             ))
 
-(def cqrs (.start (handlers/map->CQRS {})))
+(def conf {:http/auth {:secret "1234"
+                       :cookie-name "pizza"}})
+(def shield (.start (auth/map->Shield conf)))
+(def cqrs (.start (handlers/map->CQRS {:sheild shield})))
 (def routes (:routes cqrs))
-(def sheild (:sheild cqrs))
-
 (def service
   (::bootstrap/service-fn (bootstrap/create-servlet (service/service routes {}))))
 
@@ -48,7 +49,7 @@
   (-> body edn/read-string))
 
 (def valid-token
-  {"authorization" (str "Token " (auth/token sheild {:identity {:user-d 123}}))})
+  {"authorization" (str "Token " (auth/token shield {:identity {:user-d 123}}))})
 
 (def invalid-token
   {"authorization" "Token nuthin"})

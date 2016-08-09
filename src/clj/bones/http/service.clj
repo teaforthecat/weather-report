@@ -5,7 +5,7 @@
 
 (defn service [routes conf]
   {:env :prod
-   ::server/join? (or (:join? conf) false)
+   ::server/join? (or (:join? conf) false) ;; block caller?
    ::http/routes  routes
    ::http/resource-path (or (:resource-path conf) "/public")
    ::http/type :jetty
@@ -34,3 +34,4 @@
 
 (defn stop-system [system & components]
   (swap! system component/update-system-reverse components component/stop))
+

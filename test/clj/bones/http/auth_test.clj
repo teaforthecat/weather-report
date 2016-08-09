@@ -5,37 +5,40 @@
             [ring.util.codec :as codec]
             [clojure.test :refer [deftest testing is]]))
 
-(defn session [sheild data]
-  (let [{:keys [cookie-opts cookie-secret]} sheild]
+(def conf {:http/auth {:secret "1234"
+                       :cookie-name "pizza"}})
+
+(defn session [shield data]
+  (let [{:keys [cookie-opts cookie-secret]} shield]
     (store/write-session (:store cookie-opts) cookie-secret data)))
 
-(defn read-session [sheild sess]
-  (let [{:keys [cookie-opts]} sheild]
+(defn read-session [shield sess]
+  (let [{:keys [cookie-opts]} shield]
     (store/read-session (:store cookie-opts) sess)))
 
 (def session-info {:identity {:xyz 123}})
 
 (deftest request-session
-  (let [sheild (.start (auth/map->Sheild {}))]
+  (let [shield (.start (auth/map->Shield conf))]
     (testing "given an empty request and response, sets identity to nil"
-      (let [req ((auth/identity-interceptor sheild) {} )]
+      (let [req ((auth/identity-interceptor shield) {} )]
         (is (= {:identity nil} req))))
     (testing "session is readable and writable"
-      (is (= (read-session sheild (session sheild session-info)) session-info)))))
+      (is (= (read-session shield (session shield session-info)) session-info)))))
 
 
-(deftest test-sheild
+(deftest test-shield
   (testing "workable defaults"
-    (let [sheild (.start (auth/map->Sheild {}))]
+    (let [shield (.start (auth/map->Shield conf))]
       (testing "extacts data from token to identity"
         ;; all token data ends up in :identity
-        (let [valid-request {:headers {"authorization" (str "Token " (.token sheild {:xyz 123}))}}
-              req ((auth/identity-interceptor sheild) valid-request)]
+        (let [valid-request {:headers {"authorization" (str "Token " (.token shield {:xyz 123}))}}
+              req ((auth/identity-interceptor shield) valid-request)]
           (is (= 123 (get-in req [:identity :xyz])))))
       (testing "extracts data from cookie to identity"
         ;; session data must have data within :identity
-        (let [value (session sheild session-info)
+        (let [value (session shield session-info)
               valid-request {:headers {"cookie" (codec/form-encode {"bones-session" value})}}
-              req ((auth/identity-interceptor sheild)
-                   (session-request valid-request (:cookie-opts sheild)))]
+              req ((auth/identity-interceptor shield)
+                   (session-request valid-request (:cookie-opts shield)))]
           (is (= 123 (get-in req [:identity :xyz]))))))))

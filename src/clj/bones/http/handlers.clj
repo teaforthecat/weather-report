@@ -108,7 +108,7 @@
 (defn command-list-handler [_]
   {:available-commands (registered-commands)})
 
-(defn token-interceptor [sheild]
+(defn token-interceptor [shield]
   (interceptor {:name :bones/token-interceptor
                 :leave (fn [ctx]
                          ;; assuming authentic user data in response
@@ -117,7 +117,7 @@
                          ;; the token ends up in the response body
                          (let [user-data (:response ctx)]
                            (assoc ctx :response {:session {:identity user-data}
-                                                 :token (auth/token sheild user-data)})))}))
+                                                 :token (auth/token shield user-data)})))}))
 
 (defn login-handler [req]
     (if (= :login (get-in req [:body-params :command]))
@@ -137,17 +137,17 @@
 (defn query-handler [req]
   (query (:query-params req) req))
 
-(defn identity-interceptor [sheild]
+(defn identity-interceptor [shield]
   ;; sets request :identity to data of decrypted "Token" in the "Authorization" header
   ;; sets request :identity to data of :identity in session cookie
   (helpers/on-request :bones.auth/identity
-                      (auth/identity-interceptor sheild)))
+                      (auth/identity-interceptor shield)))
 
-(defn session [sheild]
+(defn session [shield]
   ;; interceptor
   ;; sets request :session to decrypted data in the session cookie
   ;; sets cookie to encrypted value of data in request :session
-  (middlewares/session (:cookie-opts sheild)))
+  (middlewares/session (:cookie-opts shield)))
 
 (def check-command-exists
   (interceptor {:name :bones/check-command-exists
@@ -236,13 +236,13 @@
     * requires exclusively `:command' and `:args' keys in post body
     * hands off `:args' of post body to `:command'
     * commands are registered with `register-command'"
-  [conf sheild]
+  [conf shield]
   [:bones/command
    ;; need to use namespace so this can be called from a macro (defroutes)
    ^:interceptors ['bones.http.handlers/error-responder              ; request ; must come first
                    (cn/negotiate-content ["application/edn"])        ; request
-                   (bones.http.handlers/session sheild)              ; auth
-                   (bones.http.handlers/identity-interceptor sheild) ; auth
+                   (bones.http.handlers/session shield)              ; auth
+                   (bones.http.handlers/identity-interceptor shield) ; auth
                    'bones.http.auth/check-authenticated              ; auth
                    (body-params/body-params)                         ; post
                    'bones.http.handlers/body-params                  ; post
@@ -252,55 +252,52 @@
                    ]
    'bones.http.handlers/command-handler])
 
-(defn command-list-resource [conf sheild]
+(defn command-list-resource [conf shield]
   ;; need to use namespace so this can be called from a macro (defroutes)
   [:bones/command-list (get-resource-interceptors) 'bones.http.handlers/command-list-handler])
 
-(defn login-resource [conf sheild]
+(defn login-resource [conf shield]
   ;; need to use namespace so this can be called from a macro (defroutes)
   [:bones/login
    ^:interceptors ['bones.http.handlers/error-responder           ; request ; must come first
                    (cn/negotiate-content ["application/edn"])     ; request
-                   (bones.http.handlers/session sheild)           ; auth
+                   (bones.http.handlers/session shield)           ; auth
                    (body-params/body-params)                      ; post
                    'bones.http.handlers/body-params               ; post
                    'bones.http.handlers/check-command-exists      ; login   ; :login should be registered
                    'bones.http.handlers/check-args-spec           ; login   ; user defined login parameters
                    'bones.http.handlers/renderer                  ; response
-                   (bones.http.handlers/token-interceptor sheild) ; response ; before response
+                   (bones.http.handlers/token-interceptor shield) ; response ; before response
                    ]
    'bones.http.handlers/login-handler])
 
-(defn query-resource [conf sheild]
+(defn query-resource [conf shield]
   ;; need to use namespace so this can be called from a macro (defroutes)
   [:bones/query
    ^:interceptors ['bones.http.handlers/error-responder              ; request ; must come first
                    (cn/negotiate-content ["application/edn"])        ; request
-                   (bones.http.handlers/session sheild)              ; auth
-                   (bones.http.handlers/identity-interceptor sheild) ; auth
+                   (bones.http.handlers/session shield)              ; auth
+                   (bones.http.handlers/identity-interceptor shield) ; auth
                    'bones.http.auth/check-authenticated              ; auth
                    'bones.http.handlers/check-query-params-spec      ; query
                    'bones.http.handlers/renderer                     ; response
                    ]
    'bones.http.handlers/query-handler])
 
-(defrecord CQRS [conf sheild]
+(defrecord CQRS [conf shield]
   component/Lifecycle
   (start [cmp]
     (let [config (get-in cmp [:conf :http/handlers])
-          auth-config (get-in cmp [:conf :http/auth])
-          sheild (.start (auth/map->Sheild auth-config))]
-      ;; not using component injection with sheild in order
-      ;; to keep the ux slim
+          shield (:shield cmp)]
       (-> cmp
-          (assoc :sheild sheild)
+          ;; (assoc :shield shield)
           (assoc :routes
                  (route/expand-routes
                   [[[(or (:mount-path config) "/api")
                      ["/command"
-                      {:post (command-resource config sheild)
-                       :get (command-list-resource config sheild)}]
+                      {:post (command-resource config shield)
+                       :get (command-list-resource config shield)}]
                      ["/query"
-                      {:get (query-resource config sheild)}]
+                      {:get (query-resource config shield)}]
                      ["/login"
-                      {:post (login-resource config sheild)}]]]]))))))
+                      {:post (login-resource config shield)}]]]]))))))

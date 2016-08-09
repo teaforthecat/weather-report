@@ -26,17 +26,21 @@
               ctx
               (throw (ex-info "Not Authenticated" {:status 401}))))})
 
-(defn identity-interceptor [sheild]
+(defn identity-interceptor [shield]
   ;; identity above refers to buddy's idea of authentication identity
   ;; identity below is clojure.core; to hack the ring middleware for pedestal
-  (let [{:keys [token-backend cookie-backend]} sheild]
+  (let [{:keys [token-backend cookie-backend]} shield]
     ;; (fn [])
     (wrap-authentication identity token-backend cookie-backend)))
+
+(defn validate-cookie-secret [cookie-secret]
+  (assert (= 16 (count cookie-secret))
+          (str  "ring.middleware.session.cookie says the secret key must be exactly 16 bytes(characters); " (format "%s is %d" (pr-str cookie-secret) (count cookie-secret))) ))
 
 (defprotocol Token
   (token [this data]))
 
-(defrecord Sheild [conf]
+(defrecord Shield [conf]
   Token
   (token [cmp data]
     (let [exp? (:token-exp-ever cmp)
@@ -50,7 +54,8 @@
       (jwe/encrypt claims secret algorithm)))
   component/Lifecycle
   (start [cmp]
-    (let [{:keys [secret
+    (let [config (get-in cmp [:conf :http/auth])
+          {:keys [secret
                   algorithm
                   cookie-secret
                   cookie-name
@@ -60,13 +65,14 @@
                   token-exp-ever?]
            :or {secret (nonce/random-bytes 32)
                 algorithm {:alg :a256kw :enc :a128gcm}
-                cookie-secret "a 16-byte secret"
+                cookie-secret (nonce/random-bytes 16) ;; "a 16-byte secret"
                 cookie-name "bones-session"
                 cookie-https-only false
                 cookie-max-age (* 60 60 24 365) ;; one year
                 token-exp-hours (* 24 365) ;; one year
                 token-exp-ever? false
-                }} conf]
+                }} config]
+      (validate-cookie-secret cookie-secret)
       (-> cmp
           (assoc :secret secret)
           (assoc :token-backend (jwe-backend {:secret secret :options algorithm}))
