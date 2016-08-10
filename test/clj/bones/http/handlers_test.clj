@@ -62,7 +62,10 @@
     (is (handlers/register-command :test {} ::handlers/echo)))
   (testing "non existing function throws error"
     (is (thrown? clojure.lang.ExceptionInfo
-                 (handlers/register-command :nope {})))))
+                 (handlers/register-command :nope {}))))
+  (testing "all at once with register-commands"
+    (is (handlers/register-commands [[:test {} ::hello]
+                                     [:test {} ::handlers/echo]]))))
 
 ;; pretend command handler
 (defn hello [args req]

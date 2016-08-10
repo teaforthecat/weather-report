@@ -10,19 +10,17 @@
 (defn login [args req]
   {:user-id 123 :roles ["tester"]})
 
-(handlers/register-command :login {:username s/Str
-                                   :password s/Str})
-
 (defn add-account [args req]
   args)
-
-(handlers/register-command :add-account {:account/xact-id s/Int
-                                         :account/evo-id (s/maybe s/Int)})
 
 (def conf {:http/auth {:secret "a 16 byte stringa 32 byte string"}
            :http/handlers {:mount-path "/api"}})
 
 (defn init-system [config]
+  (handlers/register-commands [[:add-account {:account/xact-id s/Int
+                                              :account/evo-id (s/maybe s/Int)}
+                                :weather-report.core/add-account]
+                               [:login {:username s/Str :password s/Str}]])
   (http/build-system sys config))
 
 (defn -main
@@ -33,7 +31,8 @@
   (http/start-system sys))
 
 (comment
- (init-system config)
- (http/start-system sys)
+  ;; for the repl
+  (init-system conf)
+  (http/start-system sys)
   (http/stop-system sys)
   )

@@ -71,6 +71,9 @@
      (defmethod command command-name [command req]
        (command-handler (:args command) req)))))
 
+(defn register-commands [commands]
+  (map (partial apply register-command) commands))
+
 (defn register-query-handler [explicit-handler schema]
   (let [user-query-handler (resolve-command explicit-handler)]
     (if (nil? user-query-handler)
