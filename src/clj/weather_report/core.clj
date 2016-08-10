@@ -13,14 +13,18 @@
 (defn add-account [args req]
   args)
 
-(def conf {:http/auth {:secret "a 16 byte stringa 32 byte string"}
-           :http/handlers {:mount-path "/api"}})
+(def conf
+  {:http/auth {:secret "a 16 byte stringa 32 byte string"}
+   :http/handlers {:mount-path "/api"}})
+
+(def commands
+  [[:add-account {:account/xact-id s/Int
+                  :account/evo-id (s/maybe s/Int)}
+    :weather-report.core/add-account]
+   [:login {:username s/Str :password s/Str}]])
 
 (defn init-system [config]
-  (handlers/register-commands [[:add-account {:account/xact-id s/Int
-                                              :account/evo-id (s/maybe s/Int)}
-                                :weather-report.core/add-account]
-                               [:login {:username s/Str :password s/Str}]])
+  (handlers/register-commands commands)
   (http/build-system sys config))
 
 (defn -main
