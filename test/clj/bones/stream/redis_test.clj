@@ -1,4 +1,4 @@
-(ns bones.http.redis-test
+(ns bones.stream.redis-test
   (:require [clojure.test :refer [deftest testing is use-fixtures run-tests]]
             [bones.http.redis :as redis]
             [bones.system :refer [sys add-component start-system]]

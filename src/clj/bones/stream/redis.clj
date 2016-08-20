@@ -1,4 +1,4 @@
-(ns bones.http.redis
+(ns bones.stream.redis
   (:require [com.stuartsierra.component :as component]
             [taoensso.carmine :as car]
             [manifold.stream :as ms]
@@ -15,7 +15,6 @@
 ;; for a single namespace
 (def close-listener car/close-listener)
 
-;; todo publish ...
 (defn publish [user-id message]
   (let [{:keys [spec chan-prefix]} (:redis @sys)
         channel (str chan-prefix user-id)]

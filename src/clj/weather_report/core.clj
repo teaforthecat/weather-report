@@ -2,8 +2,7 @@
   (:gen-class)
   (require [com.stuartsierra.component :as component]
            [schema.core :as s]
-           [bones.http.core :as http]
-           [bones.http.handlers :as handlers]))
+           [bones.http.core :as http]))
 
 (def sys (atom {}))
 
@@ -24,8 +23,8 @@
    [:login {:username s/Str :password s/Str}]])
 
 (defn init-system [config]
-  (handlers/register-commands commands)
-  (http/build-system sys config))
+  (http/build-system sys config)
+  (http/register-commands commands))
 
 (defn -main
   "The entry-point for 'lein run'"
@@ -36,6 +35,7 @@
 
 (comment
   ;; for the repl
+  (println "hi")
   (init-system conf)
   (http/start-system sys)
   (http/stop-system sys)
