@@ -35,6 +35,8 @@
                                    ;; passthru value serializer
                                    (nkp/byte-array-serializer)))]
       (-> cmp
+          (assoc :conf config) ;; for debugging
+          (assoc :serialization-format serialization-format) ;; for debugging
           (assoc :serializer (serializer/encoder serialization-format))
           ;; store producer to call .close on
           (assoc :producer producer)
@@ -78,8 +80,7 @@
   (consume [cmp topic handler]
     (future
       (doseq [msg ((:conn cmp) topic)]
-        (->> msg
-            :value
-            ((:deserializer cmp))
-            handler)))))
-
+        (-> msg
+             (update :key (:deserializer cmp))
+             (update :value (:deserializer cmp))
+             handler)))))
