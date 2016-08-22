@@ -2,5 +2,4 @@
 
 (def default-db
   {:name "re-frame"
-   :bones/logged-in? false
    :accounts []})

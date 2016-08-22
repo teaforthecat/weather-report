@@ -1,13 +1,22 @@
 (ns weather-report.handlers
+  (:import goog.net.Cookies)
   (:require [re-frame.core :as re-frame]
             [weather-report.db :as db]
             [bones.client :as client]
             [cljs.core.async :as a]))
 
+(defn get-cookie [cookie-name]
+  (.get (Cookies. js/document) cookie-name))
+
+(defn delete-cookie [cookie-name]
+  (.remove (Cookies. js/document) cookie-name))
+
 (re-frame/register-handler
  :initialize-db
  (fn  [_ _]
-   db/default-db))
+   (if (get-cookie "bones-session")
+     (assoc db/default-db :bones/logged-in? true)
+     (assoc db/default-db :bones/logged-in? false))))
 
 (re-frame/register-handler
  :set-active-panel
@@ -40,6 +49,7 @@
 (re-frame/register-handler
  :logout
  (fn [db [_ form-ratom]]
+   (delete-cookie "bones-session")
    (assoc db :bones/logged-in? false)))
 
 (re-frame/register-handler
@@ -48,6 +58,7 @@
    (if (= 200 (:status response))
      (do
        (reset! form default-form)
+       (re-frame/dispatch [:get-accounts])
        (assoc db :bones/logged-in? true))
      (do
        (println response)
@@ -64,3 +75,32 @@
        (swap! form assoc :errors (:body response))
        (println response)
        db))))
+
+(re-frame/register-handler
+ :get-accounts-handler
+ (fn [db [_ response]]
+   (if (= 200 (:status response))
+     (let [results (get-in response [:body :results])
+           accounts (map #(-> %
+                              (assoc :account/xact-id (:key %))
+                              (assoc :account/evo-id (get-in % [:value "evo-id"])))
+                         results)]
+       (println accounts)
+       (assoc db :accounts accounts))
+     ;; todo error reporting
+     db)))
+
+(re-frame/register-handler
+ :get-accounts
+ (fn [db [_]]
+   (if (:bones/logged-in? db)
+     (a/take! (client/query {:accounts :all})
+              #(re-frame/dispatch [:get-accounts-handler %])))
+   db))
+
+
+(comment
+  (re-frame/dispatch [:get-accounts])
+
+
+  )

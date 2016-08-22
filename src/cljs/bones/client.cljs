@@ -10,6 +10,13 @@
     (let [resp (<! (http/post url  {:edn-params data}))]
       resp)))
 
+(defn query [data]
+  ;; maybe validate :query, :args present
+  (go
+    (let [url "http://localhost:8080/api/query"
+          resp (<! (http/get url  {:query-params data}))]
+      resp)))
+
 (comment
   (a/take! (post "http://localhost:8080/api/login"
                  {:command :login

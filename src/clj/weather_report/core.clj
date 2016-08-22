@@ -26,7 +26,6 @@
 
 (comment
   (add-account {:account/evo-id 123 :account/xact-id 456} {})
-  (add-account {:account/evo-id 987 :account/xact-id 654} {})
   (add-account {:account/evo-id nil :account/xact-id 456} {})
   )
 
