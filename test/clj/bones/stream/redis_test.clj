@@ -1,38 +1,50 @@
 (ns bones.stream.redis-test
-  (:require [clojure.test :refer [deftest testing is use-fixtures run-tests]]
-            [bones.http.redis :as redis]
-            [bones.system :refer [sys add-component start-system]]
-            [bones.conf :as conf]
-            [manifold.stream :as ms]))
+  (:require [bones.conf :as conf]
+            [bones.stream.redis :as redis]
+            [clojure.test :refer [deftest testing is use-fixtures run-tests]]
+            [manifold.stream :as ms]
+            [com.stuartsierra.component :as component]
+            [bones.stream.kafka :as kafka]))
 
-(defn setup [test-fn]
-  (add-component :conf (conf/map->Conf {:files ["conf/test.edn"]}))
-  (add-component :redis (redis/map->Redis {}))
-  (start-system :redis)
-  (test-fn))
 
-(use-fixtures :each setup)
+(def sys (atom {}))
+
+(defn setup [test]
+  (swap! sys assoc :conf (conf/map->Conf {:files ["conf/test.edn"]}))
+  (swap! sys assoc :redis (component/using
+                           (redis/map->Redis {})
+                           [:conf]))
+  (swap! sys component/start-system [:conf])
+  (swap! sys component/start-system [:redis])
+  (test)
+  (swap! sys component/stop-system)
+  ;; todo clear data from redis
+  )
+
+(use-fixtures :once setup)
 
 (deftest pubsub
-  (testing "pubsub"
+  (testing "pubsub serialization"
     (let [stream (ms/stream)
-          sub (redis/subscribe "123" stream)
-          _ (redis/publish "123" "hello")
+          _ (.subscribe (:redis @sys) "123" stream)
+          _ (.publish (:redis @sys) "123" {:abc 123})
           result (ms/take! stream)]
-      (redis/close-listener sub)
-      (is (= "hello" @result)))))
+      (is (= {:abc 123} @result)))))
 
-(deftest component
-  (testing "inline conf"
-    (add-component :redis (redis/map->Redis {:channel-prefix "abc"
-                                            :spec {:host "somewhere.else"
-                                                   :port 123}}))
-    (start-system :redis)
-    (is (= "abc" (get-in @sys [:redis :channel-prefix])))
-    (is (= 123 (get-in @sys [:redis :spec :port]))))
 
-  (testing "conf overrides values"
-    (swap! sys assoc-in [:conf :redis :spec] "xyz")
-    (swap! sys assoc-in [:redis :spec] "abc")
-    (start-system :redis)
-    (is (= "xyz" (get-in @sys [:redis :spec])))))
+(deftest materialized-view
+  (testing "write a value, read a value"
+    (let [r (:redis @sys)
+          _ @(redis/write r "test" 123 {:abc 123})
+          m @(redis/fetch r 123)]
+      (is (= {:key 123, :value {:abc 123}} m))))
+  (testing "fetches a list of keys"
+    (let [r (:redis @sys)
+          _ @(redis/write r "test" 123 {:abc 123})]
+      (is (= ["123"] @(redis/fetch-keys r "test" )))))
+  (testing "read a set of values"
+    (let [r (:redis @sys)
+          _ @(redis/write r "test" 123 {:abc 123})
+          ms @(redis/fetch-all r "test")]
+      ;; notice the keys are turned into strings
+      (is (= [{:key "123" :value {:abc 123}}] ms)))))

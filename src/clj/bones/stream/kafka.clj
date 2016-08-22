@@ -9,7 +9,8 @@
 (def default-format :msgpack )
 
 (defprotocol Produce
-  (produce [this topic key data]))
+  (produce [this topic key data])
+  (produce-stream [this stream & {:as opts}]))
 
 (defprotocol Consume
   (consume [this topic stream]))
@@ -17,9 +18,12 @@
 (defrecord Producer [conf conn]
   component/Lifecycle
   (stop [cmp]
-    (.close (:producer cmp))
-    ;; dissoc changes the type
-    (assoc cmp :conn nil :producer nil))
+    (if (:producer cmp)
+      (do
+        (.close (:producer cmp))
+        ;; dissoc changes the type
+        (assoc cmp :conn nil :producer nil))
+      cmp))
   (start [cmp]
     (let [config (get-in cmp [:conf :stream])
           producer-config (select-keys (merge {"bootstrap.servers" "127.0.0.1:9092"}
@@ -27,21 +31,23 @@
                                        ["bootstrap.servers"])
           {:keys [serialization-format]
            :or {serialization-format default-format}} config
+          producer (nkp/producer producer-config
+                                 ;; passthru key serializer
+                                 (nkp/byte-array-serializer)
+                                 ;; passthru value serializer
+                                 (nkp/byte-array-serializer))
           ;; check for conn so we don't need a connection to run tests
-          producer (if-not (:conn cmp)
-                     (nkp/producer producer-config
-                                   ;; passthru key serializer
-                                   (nkp/byte-array-serializer)
-                                   ;; passthru value serializer
-                                   (nkp/byte-array-serializer)))]
+          conn (if (:conn cmp)
+                     (:conn cmp)
+                     (partial nkp/send producer))]
       (-> cmp
-          (assoc :conf config) ;; for debugging
+          (assoc :config config) ;; for debugging
           (assoc :serialization-format serialization-format) ;; for debugging
           (assoc :serializer (serializer/encoder serialization-format))
           ;; store producer to call .close on
           (assoc :producer producer)
           ;; build a conn function that is easy to stub in tests
-          (assoc :conn (get cmp :conn (partial nkp/send producer))))))
+          (assoc :conn conn))))
   Produce
   (produce [cmp topic key data]
     (let [key-bytes (.getBytes key)
@@ -49,7 +55,12 @@
           record (nkp/record topic
                              key-bytes
                              data-bytes)]
-      ((:conn cmp) record))))
+      ((:conn cmp) record)))
+  (produce-stream [cmp stream & {:as opts}]
+    (ms/consume
+     #(let [{:keys [topic key value]} (merge opts %)]
+        (produce cmp topic key value))
+     stream)))
 
 (defrecord Consumer [config conn]
   component/Lifecycle
@@ -69,13 +80,16 @@
           {:keys [serialization-format]
            :or {serialization-format default-format}} config
           ;; check for conn so we don't need a connection to run tests
-          consumer (if-not (:conn cmp) (zkc/consumer consumer-config))]
+          consumer (zkc/consumer consumer-config)
+          conn (if (:conn cmp)
+                 (:conn cmp)
+                 (partial zkc/messages consumer))]
       (-> cmp
           (assoc :deserializer (serializer/decoder serialization-format))
           ;; store consumer to call .shutdown on
           (assoc :consumer consumer)
           ;; build a conn function that is easy to stub in tests
-          (assoc :conn (get cmp :conn (partial zkc/create-message-stream consumer))))))
+          (assoc :conn conn))))
   Consume
   (consume [cmp topic handler]
     (future
