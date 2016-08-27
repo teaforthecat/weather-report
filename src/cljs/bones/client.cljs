@@ -4,21 +4,36 @@
   (:require [cljs-http.client :as http]
             [cljs.core.async :as a]))
 
-(defn post [url data]
+(defn command [data token]
   ;; maybe validate :command, :args present
   (go
-    (let [resp (<! (http/post url  {:edn-params data}))]
+    (let [url "http://localhost:8080/api/command"
+          req {:edn-params data
+               :headers {"authorization" (str "Token " token)}
+               }
+          resp (<! (http/post url req))]
       resp)))
 
-(defn query [data]
+(defn login [data]
+  (go
+    (let [url "http://localhost:8080/api/login"
+          req {:edn-params data}
+          resp (<! (http/post url req))]
+      resp)))
+
+(defn query [data token]
   ;; maybe validate :query, :args present
   (go
     (let [url "http://localhost:8080/api/query"
-          resp (<! (http/get url  {:query-params data}))]
+          req {:query-params data
+               :headers {"authorization" (str "Token " token)}}
+          resp (<! (http/get url req))]
       resp)))
 
 (comment
-  (a/take! (post "http://localhost:8080/api/login"
+  #_(a/take! (command {:command :echo :args {:hello "mr"}}
+                    (get-in @re-frame.core/db [:bones/token])))
+  #_(a/take! (post "http://localhost:8080/api/login"
                  {:command :login
                   :args {:username "abc" :password "xyz"}} )
            println)

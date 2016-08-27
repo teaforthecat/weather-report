@@ -29,7 +29,7 @@
   (add-account {:account/evo-id nil :account/xact-id 456} {})
   )
 
-;; todo put this is conf file
+;; todo put this in a conf file
 (def conf
   {:http/auth {:secret "a 16 byte stringa 32 byte string"}
    :http/handlers {:mount-path "/api"}

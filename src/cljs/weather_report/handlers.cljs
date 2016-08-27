@@ -27,17 +27,17 @@
 
 (defmethod submit-form :login [form-id db form default-form]
   (let [form-data (select-keys @form [:username :password])]
-    (a/take! (client/post "http://localhost:8080/api/login"
-                          {:command :login
+    (a/take! (client/login {:command :login
                            :args form-data})
              #(re-frame/dispatch [:login-handler % form default-form]))
     db))
 
 (defmethod submit-form :add-account [form-id db form default-form]
-  (let [form-data (select-keys @form [:account/xact-id :account/evo-id])]
-    (a/take! (client/post "http://localhost:8080/api/command"
-                          {:command :add-account
-                           :args form-data})
+  (let [form-data (select-keys @form [:account/xact-id :account/evo-id])
+        token (get-in db [:bones/token])]
+    (a/take! (client/command {:command :add-account
+                              :args form-data}
+                             token)
              #(re-frame/dispatch [:add-account-handler % form default-form]))
     db))
 
@@ -56,10 +56,12 @@
  :login-handler
  (fn [db [_ response form default-form]]
    (if (= 200 (:status response))
-     (do
+     (let [token (get-in response [:body :token])]
        (reset! form default-form)
-       (re-frame/dispatch [:get-accounts])
-       (assoc db :bones/logged-in? true))
+       (re-frame/dispatch [:get-accounts token])
+       (-> db
+           (assoc :bones/logged-in? true)
+           (assoc :bones/token token)))
      (do
        (println response)
        db))))
@@ -85,16 +87,15 @@
                               (assoc :account/xact-id (:key %))
                               (assoc :account/evo-id (get-in % [:value "evo-id"])))
                          results)]
-       (println accounts)
        (assoc db :accounts accounts))
      ;; todo error reporting
      db)))
 
 (re-frame/register-handler
  :get-accounts
- (fn [db [_]]
-   (if (:bones/logged-in? db)
-     (a/take! (client/query {:accounts :all})
+ (fn [db [_ auth-token]]
+   (if-let [token (or auth-token (get-in db [:bones/token]))]
+     (a/take! (client/query {:accounts :all} token)
               #(re-frame/dispatch [:get-accounts-handler %])))
    db))
 
@@ -102,5 +103,5 @@
 (comment
   (re-frame/dispatch [:get-accounts])
 
-
+(@re-frame.core/db)
   )
