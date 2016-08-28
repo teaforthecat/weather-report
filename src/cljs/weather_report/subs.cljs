@@ -15,9 +15,9 @@
 (re-frame/register-sub
  :bones/logged-in?
  (fn [db _]
-   (reaction (:bones/logged-in? @db))))
+   (reaction (:bones/token @db))))
 
 (re-frame/register-sub
  :accounts
  (fn [db _]
-   (reaction (:accounts @db))))
+   (reaction (seq (:accounts @db)))))

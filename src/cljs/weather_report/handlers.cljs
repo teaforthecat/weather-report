@@ -8,15 +8,18 @@
 (defn get-cookie [cookie-name]
   (.get (Cookies. js/document) cookie-name))
 
+(defn set-cookie [cookie-name value]
+  (.set (Cookies. js/document) cookie-name value))
+
 (defn delete-cookie [cookie-name]
   (.remove (Cookies. js/document) cookie-name))
 
 (re-frame/register-handler
  :initialize-db
  (fn  [_ _]
-   (if (get-cookie "bones-session")
-     (assoc db/default-db :bones/logged-in? true)
-     (assoc db/default-db :bones/logged-in? false))))
+   (if-let [token (get-cookie "bones-token")]
+     (assoc db/default-db :bones/token token)
+     db/default-db)))
 
 (re-frame/register-handler
  :set-active-panel
@@ -49,8 +52,8 @@
 (re-frame/register-handler
  :logout
  (fn [db [_ form-ratom]]
-   (delete-cookie "bones-session")
-   (assoc db :bones/logged-in? false)))
+   (delete-cookie "bones-token")
+   (assoc db :bones/token false)))
 
 (re-frame/register-handler
  :login-handler
@@ -59,8 +62,8 @@
      (let [token (get-in response [:body :token])]
        (reset! form default-form)
        (re-frame/dispatch [:get-accounts token])
+       (set-cookie "bones-token" token)
        (-> db
-           (assoc :bones/logged-in? true)
            (assoc :bones/token token)))
      (do
        (println response)
@@ -99,9 +102,26 @@
               #(re-frame/dispatch [:get-accounts-handler %])))
    db))
 
+(re-frame/register-handler
+ :remove-account-handler
+ (fn [db [_ response id]]
+   (if (= 200 (:status response))
+     (let [accounts (:accounts db)]
+       (update db :accounts (partial remove
+                                     #(= id (:account/xact-id %)))))
+     ;; todo error handling
+     db)))
+
+(re-frame/register-handler
+ :remove-account
+ (fn [db [_ id]]
+   (if-let [token (get-in db [:bones/token])]
+     (a/take! (client/command {:command :add-account
+                               :args {:account/xact-id (int id) :account/evo-id nil}} token)
+              #(re-frame/dispatch [:remove-account-handler % id])))
+   db))
+
 
 (comment
   (re-frame/dispatch [:get-accounts])
-
-(@re-frame.core/db)
   )

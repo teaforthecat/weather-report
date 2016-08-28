@@ -2,4 +2,4 @@
 
 (def default-db
   {:name "re-frame"
-   :accounts []})
+   :accounts ()})
