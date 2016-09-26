@@ -19,7 +19,7 @@
     </rollingPolicy>
 
     <filter class="ch.qos.logback.classic.filter.ThresholdFilter">
-      <level>WARN</level>
+      <level>DEBUG</level>
     </filter>
     <!-- Safely log to the same file from multiple JVMs. Degrades performance! -->
     <prudent>true</prudent>
@@ -34,21 +34,20 @@
     </encoder>
     <!-- Only log level WARN and above -->
     <filter class="ch.qos.logback.classic.filter.ThresholdFilter">
-      <level>WARN</level>
+      <level>DEBUG</level>
     </filter>
   </appender>
 
 
   <!-- Enable FILE and STDOUT appenders for all log messages.
        By default, only log at level INFO and above. -->
-  <root level="INFO">
+  <root level="DEBUG">
     <appender-ref ref="FILE" />
     <appender-ref ref="STDOUT" />
   </root>
 
-  <!-- For loggers in the these namespaces, log at all levels. -->
-  <logger name="pedestal" level="WARN" />
-  <logger name="hammock-cafe" level="WARN" />
-  <logger name="user" level="ALL" />
+  <logger name="pedestal" level="DEBUG" />
+  <logger name="user" level="DEBUG" />
+  <logger name="weather-report" level="DEBUG" />
 
 </configuration>

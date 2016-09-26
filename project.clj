@@ -6,7 +6,7 @@
                  [re-frame "0.7.0"]
                  [secretary "1.2.3"]
                  ;; bones deps
-                 [bones.http "0.1.0-SNAPSHOT"]
+                 [bones.http "0.2.0"]
                  ;; [io.pedestal/pedestal.service "0.5.0"]
                  ;; [io.pedestal/pedestal.jetty "0.5.0"]
                  ;; [buddy/buddy-auth "0.8.1"]
@@ -31,6 +31,7 @@
 
   :min-lein-version "2.5.3"
 
+  :resource-paths ["resources"]
   :source-paths ["src/clj"]
   :test-paths   ["test/clj"]
 

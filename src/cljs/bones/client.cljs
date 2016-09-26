@@ -2,14 +2,17 @@
   (:require-macros [cljs.core.async.macros :refer [go go-loop]]
                    [schema.core :as s])
   (:require [cljs-http.client :as http]
+            [com.stuartsierra.component :as component]
             [cljs.core.async :as a]))
 
-(defn command [data token]
+(defn command [data & token]
   ;; maybe validate :command, :args present
   (go
     (let [url "http://localhost:8080/api/command"
           req {:edn-params data
-               :headers {"authorization" (str "Token " token)}
+               :headers (if token
+                          {"authorization" (str "Token " token)}
+                          {})
                }
           resp (<! (http/post url req))]
       resp)))
@@ -21,12 +24,20 @@
           resp (<! (http/post url req))]
       resp)))
 
-(defn query [data token]
+(defn logout []
+  (go
+    (let [url "http://localhost:8080/api/logout"
+          resp (<! (http/get url))]
+      resp)))
+
+(defn query [data & token]
   ;; maybe validate :query, :args present
   (go
     (let [url "http://localhost:8080/api/query"
           req {:query-params data
-               :headers {"authorization" (str "Token " token)}}
+               :headers (if token
+                          {"authorization" (str "Token " token)}
+                          {})}
           resp (<! (http/get url req))]
       resp)))
 
@@ -80,3 +91,55 @@
     (subscribe! "onclose")
     (swap! conn assoc "event-bus" event-bus)
     websocket))
+
+;; careful, chrome hides a 401 response so if you see a blankish request/response
+;; try switching to firefox to see the 401 unauthorized response
+(defrecord EventSource [event-source url msg-ch]
+  component/Lifecycle
+  (start [cmp]
+    (if (:event-source cmp)
+      (do
+        (println "already started stream")
+        cmp)
+      (do
+        (println "starting event stream")
+        (let [src (js/EventSource. (:url cmp) #js{ :withCredentials true } )]
+          (set! (.-onmessage src) (fn [ev]
+                                    (js/console.log "onmessage")
+                                    (js/console.log ev.data)
+                                    (let [msg (cljs.reader/read-string ev.data)]
+                                      (a/put! (:msg-ch cmp) msg))))
+          (set! (.-onerror src) (fn [ev]
+                                  (js/console.log "onerror")
+                                  (js/console.log ev)
+                                  (.close src)))
+          (set! (.-onopen src) (fn [ev]
+                                 (js/console.log "EventSource listening")))
+          (-> cmp
+              (assoc :event-source src)
+              (assoc :state (.-readyState src)))))))
+  (stop [cmp]
+    (if (:event-source cmp)
+      (do
+        (println "closing stream")
+        (.close (:event-source cmp))
+        (dissoc cmp :event-source))
+      (do
+        (println "stream already closed")
+        cmp))))
+
+
+(comment
+  (def a (a/chan))
+  (go-loop []
+    (a/take! a println))
+  (def e (component/start (map->EventSource {:msg-ch a :url "http://localhost:8080/api/events"})))
+  (component/stop e)
+
+  (a/take! (logout) println)
+
+
+  (listen "ws://localhost:8080/api/ws" {})
+  (js/WebSocket. "ws://localhost:8080/api/ws")
+
+  )

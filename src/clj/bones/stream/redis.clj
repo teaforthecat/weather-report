@@ -45,17 +45,13 @@
     (reset! listeners [])
     cmp)
   Publish
-  (publish [cmp user-id message]
-    (let [{:keys [spec chan-prefix]} cmp
-          channel (str chan-prefix user-id)]
-      (car/wcar {:spec spec} ;; use default pool option
-                (car/publish channel message))))
+  (publish [cmp channel message]
+    (car/wcar {:spec spec} ;; use default pool option
+              (car/publish channel message)))
   Subscribe
-  (subscribe [cmp user-id stream]
+  (subscribe [cmp channel stream]
     ; one user/browser connection (through local pool)
-    (let [{:keys [spec chan-prefix]} cmp
-          channel (str chan-prefix user-id)
-          listener
+    (let [listener
           (car/with-new-pubsub-listener {:spec spec}
             {channel (message-handler stream)}
             (car/subscribe channel))]

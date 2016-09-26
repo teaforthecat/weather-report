@@ -39,8 +39,7 @@
   (let [form-data (select-keys @form [:account/xact-id :account/evo-id])
         token (get-in db [:bones/token])]
     (a/take! (client/command {:command :add-account
-                              :args form-data}
-                             token)
+                              :args form-data})
              #(re-frame/dispatch [:add-account-handler % form default-form]))
     db))
 
@@ -50,21 +49,28 @@
   (submit-form form-id db form default-form)))
 
 (re-frame/register-handler
- :logout
- (fn [db [_ form-ratom]]
+ :logout-handler
+ (fn [db [_]]
    (delete-cookie "bones-token")
    (assoc db :bones/token false)))
+
+(re-frame/register-handler
+ :logout
+ (fn [db [_ form-ratom]]
+   (a/take! (client/logout)
+            #(re-frame/dispatch [:logout-handler]))
+   db))
 
 (re-frame/register-handler
  :login-handler
  (fn [db [_ response form default-form]]
    (if (= 200 (:status response))
-     (let [token (get-in response [:body :token])]
+     (let [token (get-in response [:body "token"])]
        (reset! form default-form)
        (re-frame/dispatch [:get-accounts token])
        (set-cookie "bones-token" token)
        (-> db
-           (assoc :bones/token token)))
+           (assoc :bones/token true)))
      (do
        (println response)
        db))))
@@ -98,7 +104,7 @@
  :get-accounts
  (fn [db [_ auth-token]]
    (if-let [token (or auth-token (get-in db [:bones/token]))]
-     (a/take! (client/query {:accounts :all} token)
+     (a/take! (client/query {:accounts :all})
               #(re-frame/dispatch [:get-accounts-handler %])))
    db))
 
@@ -117,7 +123,7 @@
  (fn [db [_ id]]
    (if-let [token (get-in db [:bones/token])]
      (a/take! (client/command {:command :add-account
-                               :args {:account/xact-id (int id) :account/evo-id nil}} token)
+                               :args {:account/xact-id (int id) :account/evo-id nil}})
               #(re-frame/dispatch [:remove-account-handler % id])))
    db))
 
