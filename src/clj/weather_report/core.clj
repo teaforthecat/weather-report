@@ -3,7 +3,7 @@
   (:require [com.stuartsierra.component :as component]
             [schema.core :as s]
             [manifold.stream :as ms]
-            [bones.http.core :as http]
+            [bones.http :as http]
             [bones.stream.core :as stream]
             [bones.stream.kafka :as kafka]
             [weather-report.worker :as worker]
@@ -106,7 +106,7 @@
   (worker/connect sys)
   (http/start sys)
   (user/fig) ; frontend process
-  (user/cljs) ; switch to browser repl
+  (user/cljs) ; switch to browser repl `:cljs/quit' to switch back
 
   (http/stop sys)
   (stream/stop-system sys)

@@ -8,9 +8,12 @@
 
 (defn home-panel []
   (let [name (re-frame/subscribe [:name])
-        logged-in (re-frame/subscribe [:bones/logged-in?])]
+        logged-in (re-frame/subscribe [:bones/logged-in?])
+        connected (re-frame/subscribe [:bones/client-state])]
     (fn []
-      [:div (str "Hello from " @name ". This is the Home Page.")
+      [:div
+       [:div (str "Hello from " @name ". This is the Home Page.")]
+       [:div (str "Your connection is " @connected)]
        [:div [:a {:href "#/about"} "go to About Page"]]
        [forms/login]
        (if @logged-in

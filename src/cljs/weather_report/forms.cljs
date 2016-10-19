@@ -12,8 +12,9 @@
   ;; login-url
   ;; fields (username, password)
   ;; button text
-  (bones/login-form "/api/login")
+  (bones/login-form)
   )
+
 
 (def account-spec
   {:account/xact-id s/Int
@@ -46,8 +47,8 @@
           form
           (fn [id value doc]
             (validator doc))]
-         [bones/cancel "Cancel" form default-form]
-         [bones/submit "Submit" :add-account form default-form]
+         [bones/cancel-button "Cancel" form default-form]
+         [bones/submit-button "Submit" :add-account form default-form]
          ]
         [:button {:on-click #(swap! form assoc :enabled? true)}
          "Add Account"]))))

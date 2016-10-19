@@ -2,4 +2,5 @@
 
 (def default-db
   {:name "re-frame"
-   :accounts ()})
+   :accounts ()
+   :login-form (atom {})})

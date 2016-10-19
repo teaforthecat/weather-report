@@ -1,133 +1,131 @@
 (ns weather-report.handlers
   (:import goog.net.Cookies)
+  (:require-macros [reagent.ratom :refer [reaction]]
+                   [cljs.core.async.macros :refer [go go-loop]])
   (:require [re-frame.core :as re-frame]
+            [re-frame.utils :refer [log error]]
             [weather-report.db :as db]
             [bones.client :as client]
-            [cljs.core.async :as a]))
+            [cljs.core.async :as a]
+            [schema.core :as s]))
+(def debug?
+  ^boolean js/goog.DEBUG)
 
-(defn get-cookie [cookie-name]
-  (.get (Cookies. js/document) cookie-name))
-
-(defn set-cookie [cookie-name value]
-  (.set (Cookies. js/document) cookie-name value))
-
-(defn delete-cookie [cookie-name]
-  (.remove (Cookies. js/document) cookie-name))
-
-(re-frame/register-handler
- :initialize-db
- (fn  [_ _]
-   (if-let [token (get-cookie "bones-token")]
-     (assoc db/default-db :bones/token token)
-     db/default-db)))
+(def mids  [(if debug? re-frame.middleware/debug)
+            re-frame.middleware/trim-v])
 
 (re-frame/register-handler
  :set-active-panel
- (fn [db [_ active-panel]]
+ mids
+ (fn [db [active-panel]]
    (assoc db :active-panel active-panel)))
 
-(defmulti submit-form (fn [form-id _ _ _] form-id))
+(re-frame/register-handler
+ :initialize-db
+ mids
+ (fn  [_ [sys]]
+   (merge db/default-db
+          {:sys sys})))
 
-(defmethod submit-form :login [form-id db form default-form]
-  (let [form-data (select-keys @form [:username :password])]
-    (a/take! (client/login {:command :login
-                           :args form-data})
-             #(re-frame/dispatch [:login-handler % form default-form]))
+(defn req-query-handler [db [params tap]]
+  (let [c (:client @(:sys db))]
+    (client/query c params tap))
+  db)
+
+(defn req-command-handler [db [params tap]]
+  (let [c (:client @(:sys db))]
+    (client/command c params tap))
+  db)
+
+(defn req-login-handler [db [fields tap]]
+  (let [c (:client @(:sys db))]
+    (client/login c fields tap))
+  db)
+
+(defn req-logout-handler [db [form]]
+  (let [c (:client @(:sys db))]
+    (client/logout c {:form form}))
+  db)
+
+(def request-handlers [[:request/query req-query-handler
+                        :request/command req-command-handler
+                        :request/login req-login-handler
+                        :request/logout req-logout-handler]])
+
+
+(defn login-handler [db [response status tap]]
+  (if-let [sys (:sys db)]
+    (condp = status
+      ;; can't establish connection
+      0 (client/stop sys)
+      ;; start again to connect to event-stream
+      200 (do
+            (client/start sys)
+            (swap! (:form tap) assoc :enabled? false))
+      (js/console.log "error!")))
+  db)
+
+(defn logout-handler [db [response status tap]]
+  (if (= 200 (:status response))
+    (if-let [sys (:sys db)]
+      (do
+        (client/stop sys)
+        (swap! (:form tap) assoc :enabled? false)))
     db))
 
-(defmethod submit-form :add-account [form-id db form default-form]
-  (let [form-data (select-keys @form [:account/xact-id :account/evo-id])
-        token (get-in db [:bones/token])]
-    (a/take! (client/command {:command :add-account
-                              :args form-data})
-             #(re-frame/dispatch [:add-account-handler % form default-form]))
+(defn command-handler [db [response status tap]]
+  (let [{:keys [status]} response
+        {{:keys [:account/xact-id :account/evo-id]} :body} response]
+    (if (= 200 status)
+      (let [accounts (:accounts db)]
+        (if (nil? evo-id)
+          (update db :accounts (partial remove
+                                        #(= xact-id (:account/xact-id %))))
+          (update db :accounts conj {:account/xact-id xact-id
+                                     :account/evo-id evo-id})))
+      ;; todo error handling
+      db)))
+
+(defn query-handler [db [response status tap]]
+  (if (= 200 status)
+    (let [results (or (:results response) [])
+          accounts (mapv #(-> %
+                             (assoc :account/xact-id (:key %))
+                             (assoc :account/evo-id (get-in % [:value "evo-id"])))
+                        results)]
+      (assoc db :accounts accounts))
+    ;; todo error reporting
     db))
 
-(re-frame/register-handler
- :submit-form
- (fn [db [_ form-id form default-form]]
-  (submit-form form-id db form default-form)))
+(defn account-change-handler [db [event]]
+  db)
 
-(re-frame/register-handler
- :logout-handler
- (fn [db [_]]
-   (delete-cookie "bones-token")
-   (assoc db :bones/token false)))
+(def response-handlers [[:response/login login-handler {s/Any s/Any}]
+               [:response/logout logout-handler {s/Any s/Any}]
+               [:response/query query-handler {:results [s/Any]}]
+               [:response/command command-handler {s/Any s/Any}]
+               [:event/account-change account-change-handler {:account/xact-id s/Int
+                                                              :account/evo-id (s/maybe s/Int)
+                                                              s/Any s/Any}]])
 
-(re-frame/register-handler
- :logout
- (fn [db [_ form-ratom]]
-   (a/take! (client/logout)
-            #(re-frame/dispatch [:logout-handler]))
-   db))
+(def schema-check
+  "check the schema before any app code sees the revent"
+  ^{:re-frame-factory-name "path"}
+  (fn schema-check-handler
+    [schema]
+    (fn schema-check-middleware
+      [handler]
+      (fn schema-check-handler
+        [db v]
+        ;; second item in event vector is response or event - if trimv hasn't
+        ;; been applied yet - watch out
+        (if-let [errors (s/check schema (second v))]
+          (do
+            (error "schema error handling event vector: " v)
+            db)
+          (handler db v))))))
 
-(re-frame/register-handler
- :login-handler
- (fn [db [_ response form default-form]]
-   (if (= 200 (:status response))
-     (let [token (get-in response [:body "token"])]
-       (reset! form default-form)
-       (re-frame/dispatch [:get-accounts token])
-       (set-cookie "bones-token" token)
-       (-> db
-           (assoc :bones/token true)))
-     (do
-       (println response)
-       db))))
-
-(re-frame/register-handler
- :add-account-handler
- (fn [db [_ response form default-form]]
-   (if (= 200 (:status response))
-     (let [data @form]
-       (reset! form default-form)
-       (update db :accounts conj data))
-     (do
-       (swap! form assoc :errors (:body response))
-       (println response)
-       db))))
-
-(re-frame/register-handler
- :get-accounts-handler
- (fn [db [_ response]]
-   (if (= 200 (:status response))
-     (let [results (get-in response [:body :results])
-           accounts (map #(-> %
-                              (assoc :account/xact-id (:key %))
-                              (assoc :account/evo-id (get-in % [:value "evo-id"])))
-                         results)]
-       (assoc db :accounts accounts))
-     ;; todo error reporting
-     db)))
-
-(re-frame/register-handler
- :get-accounts
- (fn [db [_ auth-token]]
-   (if-let [token (or auth-token (get-in db [:bones/token]))]
-     (a/take! (client/query {:accounts :all})
-              #(re-frame/dispatch [:get-accounts-handler %])))
-   db))
-
-(re-frame/register-handler
- :remove-account-handler
- (fn [db [_ response id]]
-   (if (= 200 (:status response))
-     (let [accounts (:accounts db)]
-       (update db :accounts (partial remove
-                                     #(= id (:account/xact-id %)))))
-     ;; todo error handling
-     db)))
-
-(re-frame/register-handler
- :remove-account
- (fn [db [_ id]]
-   (if-let [token (get-in db [:bones/token])]
-     (a/take! (client/command {:command :add-account
-                               :args {:account/xact-id (int id) :account/evo-id nil}})
-              #(re-frame/dispatch [:remove-account-handler % id])))
-   db))
-
-
-(comment
-  (re-frame/dispatch [:get-accounts])
-  )
+(defn register [[channel handler schema]]
+  (re-frame/register-handler channel
+                             mids
+                             handler))

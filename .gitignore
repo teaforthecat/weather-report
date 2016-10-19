@@ -5,3 +5,6 @@
 out
 /.lein-failures
 logs/
+/.nrepl-port
+/data/
+/tmp/

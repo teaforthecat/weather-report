@@ -1,30 +1,22 @@
 (defproject weather-report "0.1.0-SNAPSHOT"
   :dependencies [[org.clojure/clojure "1.8.0"]
-                 [org.clojure/clojurescript "1.8.51"]
+                 [org.clojure/clojurescript "1.9.229"]
                  [reagent "0.5.1"]
                  [binaryage/devtools "0.6.1"]
                  [re-frame "0.7.0"]
                  [secretary "1.2.3"]
+                 [com.stuartsierra/component "0.3.1"]
                  ;; bones deps
-                 [bones.http "0.2.0"]
-                 ;; [io.pedestal/pedestal.service "0.5.0"]
-                 ;; [io.pedestal/pedestal.jetty "0.5.0"]
-                 ;; [buddy/buddy-auth "0.8.1"]
-                 ;; [buddy/buddy-hashers "0.9.1"]
-                 ;; [prismatic/schema "1.1.2"]
+                 [bones/http "0.2.0"]
                  ;; bones.stream
                  [com.taoensso/carmine "2.12.2"]
                  [org.onyxplatform/onyx-kafka "0.8.8.0"]
                  [manifold "0.1.4"]
-                 ;; pedestal deps - necessary?
-                 ;; [ch.qos.logback/logback-classic "1.1.7" :exclusions [org.slf4j/slf4j-api]]
-                 ;; [org.slf4j/jul-to-slf4j "1.7.21"]
-                 ;; [org.slf4j/jcl-over-slf4j "1.7.21"]
-                 ;; [org.slf4j/log4j-over-slf4j "1.7.21"]
-
                  ;; bones cljs
                  [reagent-forms "0.5.24"]
+                 ;; bones-client shim
                  [cljs-http "0.1.39"]
+                 ;; [bones/client "0.1.0"]
                  ]
 
   :plugins [[lein-cljsbuild "1.1.3"]]
@@ -48,11 +40,9 @@
   {:dev
    {:dependencies [
                    [figwheel-sidecar "0.5.4-3"]
-                   [com.cemerick/piggieback "0.2.1"]
-                   [io.pedestal/pedestal.service-tools "0.5.0"]]
-
+                   [com.cemerick/piggieback "0.2.1"]]
     :plugins      [[lein-figwheel "0.5.4-3"]
-                   [lein-doo "0.1.6"]
+                   [lein-doo "0.1.7"]
                    ]
     :source-paths ["dev"]
     }

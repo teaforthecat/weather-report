@@ -20,7 +20,7 @@
   ;; define routes here
   (defroute "/" []
     (re-frame/dispatch [:set-active-panel :home-panel])
-    (re-frame/dispatch [:get-accounts]))
+    (re-frame/dispatch [:request/query {:accounts :all}]))
 
   (defroute "/about" []
     (re-frame/dispatch [:set-active-panel :about-panel]))

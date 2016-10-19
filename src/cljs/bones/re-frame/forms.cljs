@@ -14,20 +14,20 @@
          [:h2.connected "connected"]
          [:h2.not-connected "not-connected"])])))
 
-(defn submit [label form-id form-ratom default-form]
+(defn submit-button [label form-id form-ratom default-form]
   [:button {:on-click #(dispatch [:submit-form form-id form-ratom default-form])
             :disabled (if-not (empty? (:errors @form-ratom)) "disabled")}
    label])
 
-(defn cancel [label form-ratom default-form]
+(defn cancel-button [label form-ratom default-form]
   [:button {:on-click #(reset! form-ratom default-form)}
    "Cancel"])
 
-(defn logout [label form-ratom]
+(defn logout-button [label form-ratom]
   [:button {:on-click #(dispatch [:logout form-ratom])}
    label])
 
-(defn login [label form-ratom]
+(defn login-button [label form-ratom]
   [:button {:on-click #(swap! form-ratom assoc :enabled? true)}
    label])
 
@@ -85,10 +85,10 @@
      ]))
 
 
-(defn login-form [login-url]
+(defn login-form []
   (let [default-form {:enabled? false}
         form (reagent/atom {})
-        logged-in (subscribe [:bones/logged-in?])
+        logged-in (subscribe [:bones/client-state])
         validator (form-validator validators error_messages)]
     (fn []
       (if (:enabled? @form)
@@ -101,9 +101,14 @@
           form
           (fn [id value doc]
             (validator doc))]
-         [cancel "Cancel" form default-form]
-         [submit "Submit" :login form default-form]
-         ]
-        (if @logged-in
-          [logout "Logout" form default-form]
-          [login "Login" form])))))
+         [cancel-button "Cancel" form default-form]
+         [:button {:on-click #(dispatch [:request/login
+                                         (select-keys @form [:username :password])
+                                         {:form form}])}
+          "Submit"]]
+        (if (= :ok @logged-in)
+          ;; [logout-button "Logout" form default-form]
+          [:button {:on-click #(dispatch [:request/logout form])} "Logout"]
+          [:button {:on-click #(swap! form assoc :enabled? true)
+                    :disabled (if-not (empty? (:errors @form)) "disabled")}
+           "Login"])))))

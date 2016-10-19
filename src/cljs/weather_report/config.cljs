@@ -4,4 +4,7 @@
   ^boolean js/goog.DEBUG)
 
 (when debug?
-  (enable-console-print!))
+  ;; is this redundant?
+  ;; (enable-console-print!)
+
+  )

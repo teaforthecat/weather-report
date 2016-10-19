@@ -1,7 +1,7 @@
 (ns weather-report.subs
-  (:require-macros [reagent.ratom :refer [reaction]]
-                   [bones.client :as client])
+  (:require-macros [reagent.ratom :refer [reaction]])
   (:require [re-frame.core :as re-frame]))
+
 
 (re-frame/register-sub
  :name
@@ -22,9 +22,3 @@
  :accounts
  (fn [db _]
    (reaction (seq (:accounts @db)))))
-
-(re-frame/register-sub
- :events
- (fn [db msg-ch]
-   (client/events msg-ch)
-   (reaction msg-ch)))
