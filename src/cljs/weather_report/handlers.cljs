@@ -32,9 +32,9 @@
     (client/query c params tap))
   db)
 
-(defn req-command-handler [db [params tap]]
+(defn req-command-handler [db [command args tap]]
   (let [c (:client @(:sys db))]
-    (client/command c params tap))
+    (client/command c command args tap))
   db)
 
 (defn req-login-handler [db [fields tap]]
@@ -47,23 +47,29 @@
     (client/logout c {:form form}))
   db)
 
-(def request-handlers [[:request/query req-query-handler
-                        :request/command req-command-handler
-                        :request/login req-login-handler
-                        :request/logout req-logout-handler]])
+(def request-handlers [[:request/query req-query-handler]
+                       [:request/command req-command-handler]
+                       [:request/login req-login-handler]
+                       [:request/logout req-logout-handler]])
 
 
 (defn login-handler [db [response status tap]]
   (if-let [sys (:sys db)]
-    (condp = status
-      ;; can't establish connection
-      0 (client/stop sys)
-      ;; start again to connect to event-stream
-      200 (do
-            (client/start sys)
-            (swap! (:form tap) assoc :enabled? false))
-      (js/console.log "error!")))
-  db)
+    (let [success (condp = status
+                    ;; can't establish connection
+                    0 (do (client/stop sys)
+                          false)
+                    ;; start again to connect to event-stream
+                    200 (do
+                          (client/stop sys)
+                          (client/start sys)
+                          (swap! (:form tap) assoc :enabled? false)
+                          true)
+                    (do
+                      (js/console.log "error!")
+                      false))]
+      (assoc db :bones/logged-in? success))
+    db))
 
 (defn logout-handler [db [response status tap]]
   (if (= 200 (:status response))
@@ -74,17 +80,9 @@
     db))
 
 (defn command-handler [db [response status tap]]
-  (let [{:keys [status]} response
-        {{:keys [:account/xact-id :account/evo-id]} :body} response]
-    (if (= 200 status)
-      (let [accounts (:accounts db)]
-        (if (nil? evo-id)
-          (update db :accounts (partial remove
-                                        #(= xact-id (:account/xact-id %))))
-          (update db :accounts conj {:account/xact-id xact-id
-                                     :account/evo-id evo-id})))
-      ;; todo error handling
-      db)))
+  (if (= 200 status)
+    (reset! (:form tap) (:default-form tap)))
+  db)
 
 (defn query-handler [db [response status tap]]
   (if (= 200 status)
@@ -97,16 +95,27 @@
     ;; todo error reporting
     db))
 
+(defn client-state-change [db [event]]
+  (if-let [logged-in? (:bones/logged-in? event)]
+    (assoc db :bones/logged-in? true)
+    db))
+
 (defn account-change-handler [db [event]]
-  db)
+  (let [{:keys [:account/xact-id :account/evo-id]} event]
+    (if (nil? evo-id)
+      (update db :accounts (partial remove
+                                    #(= xact-id (:account/xact-id %))))
+      (update db :accounts conj {:account/xact-id xact-id
+                                 :account/evo-id evo-id}))))
 
 (def response-handlers [[:response/login login-handler {s/Any s/Any}]
-               [:response/logout logout-handler {s/Any s/Any}]
-               [:response/query query-handler {:results [s/Any]}]
-               [:response/command command-handler {s/Any s/Any}]
-               [:event/account-change account-change-handler {:account/xact-id s/Int
-                                                              :account/evo-id (s/maybe s/Int)
-                                                              s/Any s/Any}]])
+                        [:response/logout logout-handler {s/Any s/Any}]
+                        [:response/query query-handler {:results [s/Any]}]
+                        [:response/command command-handler {s/Any s/Any}]
+                        [:event/client-status client-state-change {(s/optional-key :bones/logged-in?) s/Bool}]
+                        [:event/account-change account-change-handler {:account/xact-id s/Int
+                                                                       :account/evo-id (s/maybe s/Int)
+                                                                       s/Any s/Any}]])
 
 (def schema-check
   "check the schema before any app code sees the revent"

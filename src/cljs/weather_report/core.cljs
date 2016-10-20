@@ -15,20 +15,16 @@
 
 (def sys (atom {}))
 
-(defn subscribe-client [system]
-  (re-frame/register-sub
-   :bones/client-state
-   (fn [db _]
-     (reaction @(get-in @system [:client :client-state])))))
-
 (defn stream-loop [c]
   (go-loop []
     (let [revent (a/<! (client/stream c))
           body (or (get-in revent [:response :body])
-                   (:event revent)
-                   (throw "uh oh no response body or event"))]
+                   (:event revent))]
       (println "receiving" revent)
       (re-frame/dispatch [(:channel revent)
+                          ;; No body is OK sometimes. Logout, for example, only
+                          ;; needs a header but the response(event) may be
+                          ;; useful, use schema/spec after this point
                           body
                           (get-in revent [:response :status])
                           (:tap revent)]))
@@ -58,7 +54,6 @@
                             :es/error js/console.log
                             })
   (client/start sys)
-  (subscribe-client sys)
   (routes/app-routes) ;; this actually tries to make a request
   (swap! sys assoc :stream-loop (stream-loop (:client @sys)))
   ;; get the data connections setup,
@@ -67,6 +62,8 @@
 
 (comment
   (:stream-loop @sys)
+  (reset! (get-in @sys [:client :client-state]) :ok)
+  (swap! sys identity)
 
   ;; (get-in sys [:client])
   )

@@ -33,7 +33,8 @@
   )
 
 (defn format-event [request message]
-  {:data message})
+  {:event "account-change"
+   :data message})
 
 (defn event-stream [request auth-info]
   (let [user-id 1

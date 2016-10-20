@@ -14,9 +14,15 @@
          [:h2.connected "connected"]
          [:h2.not-connected "not-connected"])])))
 
-(defn submit-button [label form-id form-ratom default-form]
-  [:button {:on-click #(dispatch [:submit-form form-id form-ratom default-form])
-            :disabled (if-not (empty? (:errors @form-ratom)) "disabled")}
+(defn submit-button [label command form default-form]
+  [:button {:on-click #(dispatch [:request/command
+                                  command
+                                  (select-keys @form
+                                               [:account/xact-id
+                                                :account/evo-id])
+                                  {:form form
+                                   :default-form default-form}])
+            :disabled (if-not (empty? (:errors @form)) "disabled")}
    label])
 
 (defn cancel-button [label form-ratom default-form]
@@ -88,7 +94,7 @@
 (defn login-form []
   (let [default-form {:enabled? false}
         form (reagent/atom {})
-        logged-in (subscribe [:bones/client-state])
+        logged-in? (subscribe [:bones/logged-in?])
         validator (form-validator validators error_messages)]
     (fn []
       (if (:enabled? @form)
@@ -106,7 +112,7 @@
                                          (select-keys @form [:username :password])
                                          {:form form}])}
           "Submit"]]
-        (if (= :ok @logged-in)
+        (if @logged-in?
           ;; [logout-button "Logout" form default-form]
           [:button {:on-click #(dispatch [:request/logout form])} "Logout"]
           [:button {:on-click #(swap! form assoc :enabled? true)
