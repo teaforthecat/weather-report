@@ -33,7 +33,8 @@
   )
 
 (defn format-event [request message]
-  {:event "account-change"
+  {;;:event "account-change"
+   ;; must register handler for each event type
    :data message})
 
 (defn event-stream [request auth-info]
@@ -111,4 +112,5 @@
 
   (http/stop sys)
   (stream/stop-system sys)
+
   )

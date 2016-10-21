@@ -16,19 +16,19 @@
 (def sys (atom {}))
 
 (defn stream-loop [c]
-  (go-loop []
-    (let [revent (a/<! (client/stream c))
-          body (or (get-in revent [:response :body])
-                   (:event revent))]
-      (println "receiving" revent)
-      (re-frame/dispatch [(:channel revent)
-                          ;; No body is OK sometimes. Logout, for example, only
-                          ;; needs a header but the response(event) may be
-                          ;; useful, use schema/spec after this point
-                          body
-                          (get-in revent [:response :status])
-                          (:tap revent)]))
-    (recur)))
+  (let [stream (client/stream c)]
+    (go-loop []
+      (let [revent (a/<! stream)
+            body (or (get-in revent [:response :body])
+                     (:event revent))]
+        (re-frame/dispatch [(:channel revent)
+                            ;; No body is OK sometimes. Logout, for example, only
+                            ;; needs a header but the response(event) may be
+                            ;; useful, use schema/spec after this point
+                            body
+                            (get-in revent [:response :status])
+                            (:tap revent)]))
+      (recur))))
 
 (defn dev-setup []
   (when config/debug?
@@ -52,6 +52,7 @@
   (client/build-system sys {:url "http://localhost:8080/api"
                             :es/onopen js/console.log
                             :es/error js/console.log
+                            :es/onmessage js/console.log
                             })
   (client/start sys)
   (routes/app-routes) ;; this actually tries to make a request
@@ -61,9 +62,19 @@
   (mount-root))
 
 (comment
-  (:stream-loop @sys)
-  (reset! (get-in @sys [:client :client-state]) :ok)
-  (swap! sys identity)
+  (init)
+  (js/alert "hi")
 
-  ;; (get-in sys [:client])
+  (:stream-loop @sys)
+
+  (get-in @sys [:client :client-state])
+  (get-in @sys [:client :event-source])
+
+  (remove
+   #(= "456" (:account/xact-id %))
+   @(re-frame.core/subscribe [:accounts])
+   )
+
+  @(re-frame.core/subscribe [:accounts])
+
   )

@@ -3,7 +3,7 @@
 
 (defn remove-btn [id]
   [:div.actions
-   [:button.remove {:on-click #(dispatch [:remove-account id])}
+   [:button.remove {:on-click #(dispatch [:request/command :add-account {:account/xact-id (int id) :account/evo-id nil}])}
     "Remove"]])
 
 (defn account-li [{:keys [:account/xact-id :account/evo-id]}]

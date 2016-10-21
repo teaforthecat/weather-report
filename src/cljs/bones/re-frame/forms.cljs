@@ -110,11 +110,12 @@
          [cancel-button "Cancel" form default-form]
          [:button {:on-click #(dispatch [:request/login
                                          (select-keys @form [:username :password])
-                                         {:form form}])}
+                                         {:form form
+                                          :default-form default-form}])}
           "Submit"]]
         (if @logged-in?
           ;; [logout-button "Logout" form default-form]
-          [:button {:on-click #(dispatch [:request/logout form])} "Logout"]
+          [:button {:on-click #(dispatch [:request/logout {:form form}])} "Logout"]
           [:button {:on-click #(swap! form assoc :enabled? true)
                     :disabled (if-not (empty? (:errors @form)) "disabled")}
            "Login"])))))
