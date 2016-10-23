@@ -63,7 +63,8 @@
                     200 (do
                           (client/stop sys)
                           (client/start sys)
-                          (reset! (:form tap) (:default-form tap))
+                          (re-frame/dispatch [:request/query {:accounts :all}])
+                          (re-frame/dispatch [:component/hide :login-form])
                           true)
                     (do
                       (js/console.log "error!")
@@ -75,14 +76,12 @@
   (if (= 200 status)
     (do
       (client/stop (:sys db))
-      (swap! (:form tap) assoc :enabled? false)
       (assoc db :bones/logged-in? false))
     db))
 
 (defn response-command-handler [db [response status tap]]
   (if (= 200 status)
-    (if (and (:form tap) (:default-form tap))
-      (reset! (:form tap) (:default-form tap))))
+    (re-frame/dispatch [:component/hide :add-account]))
   db)
 
 (defn response-query-handler [db [response status tap]]
@@ -143,3 +142,8 @@
   (re-frame/register-handler channel
                              mids
                              handler))
+
+(doseq [h request-handlers]
+  (register h))
+(doseq [h response-handlers]
+  (register h))

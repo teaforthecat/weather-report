@@ -30,7 +30,7 @@
 
 (client/start sys)
 
-(core/subscribe-client (:client @sys))
+;; (core/subscribe-client (:client @sys))
 (r/dispatch [:initialize-db sys])
 
 (deftest submit-form-test

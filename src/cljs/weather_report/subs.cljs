@@ -22,3 +22,18 @@
  :accounts
  (fn [db _]
    (reaction (seq (:accounts @db)))))
+
+(re-frame/register-sub
+ :component/toggle
+ (fn [db [_ component-name]]
+   (reaction (get-in @db [:components component-name :show]))))
+
+(re-frame/register-handler
+ :component/show
+ (fn [db [_ component-name]]
+   (assoc-in db [:components component-name :show] true)))
+
+(re-frame/register-handler
+ :component/hide
+ (fn [db [_ component-name]]
+   (assoc-in db [:components component-name :show] false)))

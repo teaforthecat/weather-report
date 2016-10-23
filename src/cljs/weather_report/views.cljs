@@ -1,24 +1,23 @@
 (ns weather-report.views
-  (:require [re-frame.core :as re-frame]
-            [weather-report.forms :as forms]
-            [weather-report.ui :as ui]))
+  (:require [re-frame.core :refer [dispatch subscribe]]
+            [weather-report.components :as c]))
 
 
 ;; home
 
 (defn home-panel []
-  (let [name (re-frame/subscribe [:name])
-        logged-in (re-frame/subscribe [:bones/logged-in?])]
+  (let [name (subscribe [:name])
+        logged-in (subscribe [:bones/logged-in?])]
     (fn []
       [:div
        [:div (str "Hello from " @name ". This is the Home Page.")]
        [:div (str "Your connection is ?")]
        [:div [:a {:href "#/about"} "go to About Page"]]
-       [forms/login]
+       [c/login]
        (if @logged-in
          [:div.accounts-view
-          [forms/add-account]
-          [ui/accounts-list]])])))
+          [c/add-account]
+          [c/accounts-list]])])))
 
 
 ;; about
@@ -31,16 +30,16 @@
 
 ;; main
 
-(defmulti panels identity)
-(defmethod panels :home-panel [] [home-panel])
-(defmethod panels :about-panel [] [about-panel])
-(defmethod panels :default [] [:div])
+(defmulti panel identity)
+(defmethod panel :home-panel [] [home-panel])
+(defmethod panel :about-panel [] [about-panel])
+(defmethod panel :default [] [:div])
 
 (defn show-panel
   [panel-name]
-  [panels panel-name])
+  [panel panel-name])
 
 (defn main-panel []
-  (let [active-panel (re-frame/subscribe [:active-panel])]
+  (let [active-panel (subscribe [:active-panel])]
     (fn []
       [show-panel @active-panel])))
