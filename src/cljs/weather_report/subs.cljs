@@ -35,5 +35,6 @@
 
 (re-frame/register-handler
  :component/hide
- (fn [db [_ component-name]]
+ (fn [db [_ component-name callback]]
+   (if callback (callback))
    (assoc-in db [:components component-name :show] false)))

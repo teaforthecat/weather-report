@@ -1,4 +1,5 @@
 (ns weather-report.components
+  (:require-macros [weather-report.macros :refer [button]])
   (:require  [weather-report.subs]
              [weather-report.handlers]
              [reagent.core :as reagent]
@@ -62,7 +63,6 @@
                    :field :label}]
    ])
 
-
 (defn add-account-form []
   (let [f (reagent/atom {})]
     (form f
@@ -78,17 +78,14 @@
                   :type :number)
            ]
           [:div.buttons
-           [:button {:on-click #(do (dispatch [:component/hide :add-account])
-                                    (reset! f {}))}
-            "Cancel"]
-           [:button {:on-click #(dispatch [:request/command :add-account @f])}
-            "Submit"]])))
+           (button "Cancel" [:component/hide :add-account #(reset! f {})])
+           (button "Submit" [:request/command :add-account @f])
+           ])))
 
 (defn add-account []
   (toggle [:component/toggle :add-account]
           (add-account-form)
-          [:button {:on-click #(dispatch [:component/show :add-account])}
-           "Add Account"]))
+          (button "Add Account" [:component/show :add-account])))
 
 (defn login-form []
   (toggle [:component/toggle :login-form]
@@ -100,16 +97,12 @@
                    (field :password "Password" :type :password)
                    ]
                   [:div.buttons
-                   [:button {:on-click #(do (dispatch [:component/hide :login-form])
-                                            (reset! f {}))}
-                    "Cancel"]
-                   [:button {:on-click #(dispatch [:request/login @f])}
-                    "Submit"]]))
-          [:button {:on-click #(dispatch [:component/show :login-form])}
-           "Login"]))
+                   (button "Cancel" [:component/hide :login-form #(reset! f {})])
+                   (button "Submit" [:request/login @f])
+                   ]))
+          (button "Login" [:component/show :login-form])))
 
 (defn login []
   (toggle [:bones/logged-in?]
-          [:button {:on-click #(dispatch [:request/logout])}
-           "Logout"]
+          (button "Logout" [:request/logout])
           [login-form]))

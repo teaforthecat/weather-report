@@ -9,17 +9,16 @@
 (deftest login
   (testing "logout button shows only when logged in"
     (let [output (c/login)]
-      (is (= "Login"
-             (nth (output) 2)))
+      (is (= c/login-form (first (output))))
       (dispatch-sync [:event/client-status {:bones/logged-in? true}])
       (is (= "Logout"
              (nth (output) 2)))))
-  (testing "login form is shown"
+  (testing "login form is shown when Login buton is clicked"
     (let [output (c/login-form) ]
-      (is (= nil (output)))
+      (is (= "Login" (last (output))))
       (dispatch-sync [:component/show :login-form])
       (is (= [:div.form
-              [:h3 "Login Form"]] (output)))
+              [:h3 "Login Form"]] (take 2 (output))))
       )))
 
 
