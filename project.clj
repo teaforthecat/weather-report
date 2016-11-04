@@ -7,6 +7,7 @@
                  [secretary "1.2.3"]
                  [com.stuartsierra/component "0.3.1"]
                  ;; bones deps
+                 [bones/conf "0.1.4"]
                  [bones/http "0.2.0"]
                  ;; bones.stream
                  [com.taoensso/carmine "2.12.2"]
@@ -24,7 +25,7 @@
   :min-lein-version "2.5.3"
 
   :resource-paths ["resources"]
-  :source-paths ["src/clj"]
+  :source-paths ["src/clj" "src/cljs"] ;; src/cljs for macros.clj
   :test-paths   ["test/clj"]
 
   :clean-targets ^{:protect false} ["resources/public/js/compiled" "target"
