@@ -20,8 +20,8 @@
                   (assoc :consumer (component/using (kafka/map->Consumer {}) [:conf]))
                   (assoc :redis (component/using (redis/map->Redis {}) [:conf])))))
 
-(defn start-system [sys]
+(defn start [sys]
   (start-systems sys :producer :consumer :redis :conf))
 
-(defn stop-system [sys]
+(defn stop [sys]
   (stop-systems sys :producer :consumer :redis))

@@ -95,22 +95,22 @@
   [& args]
   ;; join? true will block the caller forever
   (init-system (assoc-in conf [:http/service :join?] true))
-  (stream/start-system sys)
+  (stream/start sys)
   (worker/connect sys)
   ;; this will block, must come last
-  (http/start-system sys))
+  (http/start sys))
 
 (comment
   ;; for the repl
   (println "hi")
   (init-system conf)
-  (stream/start-system sys)
+  (stream/start sys)
   (worker/connect sys)
   (http/start sys)
   (user/fig) ; frontend process
   (user/cljs) ; switch to browser repl `:cljs/quit' to switch back
 
   (http/stop sys)
-  (stream/stop-system sys)
+  (stream/stop sys)
 
   )
