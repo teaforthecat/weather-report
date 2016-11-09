@@ -28,13 +28,3 @@
  (fn [db [_ component-name]]
    (reaction (get-in @db [:components component-name :show]))))
 
-(re-frame/register-handler
- :component/show
- (fn [db [_ component-name]]
-   (assoc-in db [:components component-name :show] true)))
-
-(re-frame/register-handler
- :component/hide
- (fn [db [_ component-name callback]]
-   (if callback (callback))
-   (assoc-in db [:components component-name :show] false)))
