@@ -3,11 +3,12 @@
   (:require [com.stuartsierra.component :as component]
             [schema.core :as s]
             [manifold.stream :as ms]
+            [bones.conf :as bc]
             [bones.http :as http]
             [bones.stream.core :as stream]
             [bones.stream.kafka :as kafka]
-            [weather-report.worker :as worker]
-            [bones.stream.redis :as redis]))
+            [bones.stream.redis :as redis]
+            [weather-report.worker :as worker]))
 
 (def sys (atom {}))
 
@@ -75,16 +76,21 @@
   )
 
 (def conf
-  {:http/auth {:secret "a 16 byte stringa 32 byte string"
-               :allow-origin "http://localhost:3449"}
-   :http/service {:port 8080}
-   :http/handlers {:mount-path "/api"
-                   :login [login-schema login]
-                   :commands commands
-                   :query [query-schema query-handler]
-                   :event-stream event-stream}
-   :stream {:serialization-format :json-plain}})
+  (bc/map->Conf
+   ;; WR_ENV is a made up environment variable to set in a deployed environment.
+   ;; The resolved file can be used to override the secret (and everything else in conf)
+   {:files ["config/common.edn" "config/$WR_ENV.edn"]
+    :http/auth {:allow-origin "http://localhost:3449"}
+    :http/service {:port 8080}
+    :http/handlers {:mount-path "/api"
+                    :login [login-schema login]
+                    :commands commands
+                    :query [query-schema query-handler]
+                    :event-stream event-stream}
+    :stream {:serialization-format :json-plain}}))
 
+(comment
+  (component/start conf))
 
 (defn init-system [config]
   (http/build-system sys config)

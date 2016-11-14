@@ -1,4 +1,4 @@
-(defproject weather-report "0.1.0-SNAPSHOT"
+(defproject weather-report "0.2.0"
   :dependencies [[org.clojure/clojure "1.8.0"]
                  [org.clojure/clojurescript "1.9.229"]
                  [reagent "0.5.1"]
@@ -7,17 +7,15 @@
                  [secretary "1.2.3"]
                  [com.stuartsierra/component "0.3.1"]
                  ;; bones deps
-                 [bones/conf "0.1.4"]
-                 [bones/http "0.2.0"]
+                 [bones/conf "0.2.2"]
+                 [bones/http "0.2.1"]
                  ;; bones.stream
                  [com.taoensso/carmine "2.12.2"]
                  [org.onyxplatform/onyx-kafka "0.8.8.0"]
                  [manifold "0.1.4"]
                  ;; bones cljs
                  [reagent-forms "0.5.24"]
-                 ;; bones-client shim
-                 [cljs-http "0.1.39"]
-                 ;; [bones/client "0.1.0"]
+                 [bones/client "0.2.1"]
                  ]
 
   :plugins [[lein-cljsbuild "1.1.3"]]
