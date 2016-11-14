@@ -79,7 +79,7 @@
            ]
           [:div.buttons
            (button "Cancel" [:component/hide :add-account #(reset! f {})])
-           (button "Submit" [:request/command :add-account @f])
+           (button "Submit" [:request/command :add-account @f {} #(reset! f {})])
            ])))
 
 (defn add-account []

@@ -42,18 +42,13 @@
                     app)))
 
 (defn ^:export init []
-  ;; register must not be lazy
-  (doseq [h handlers/request-handlers]
-    (handlers/register h))
-  (doseq [h handlers/response-handlers]
-    (handlers/register h))
   (re-frame/dispatch-sync [:initialize-db sys])
   (dev-setup)
   (client/build-system sys {:url "http://localhost:8080/api"
                             :es/onopen js/console.log
                             :es/error js/console.log
                             :es/onmessage js/console.log
-                            })
+                            :es/connection-type :websocket})
   (client/start sys)
   (routes/app-routes) ;; this actually tries to make a request
   (swap! sys assoc :stream-loop (stream-loop (:client @sys)))

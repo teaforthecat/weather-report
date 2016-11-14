@@ -44,9 +44,10 @@
     (client/query c params tap))
   db)
 
-(defn request-command-handler [db [command args tap]]
+(defn request-command-handler [db [command args tap callback]]
   (let [c (:client @(:sys db))]
-    (client/command c command args tap))
+    (client/command c command args tap)
+    (if callback (callback)))
   db)
 
 (defn request-login-handler [db [fields tap]]
@@ -125,12 +126,10 @@
                         [:response/query response-query-handler {:results [s/Any]}]
                         [:response/command response-command-handler {s/Any s/Any}]
                         [:event/client-status event-client-state-change {(s/optional-key :bones/logged-in?) s/Bool}]
+                        ;; there is only client-status and message so far
                         [:event/message event-account-change {:account/xact-id s/Int
                                                                      :account/evo-id (s/maybe s/Int)
-                                                                     s/Any s/Any}]
-                        [:event/account-change event-account-change {:account/xact-id s/Int
-                                                                       :account/evo-id (s/maybe s/Int)
-                                                                       s/Any s/Any}]])
+                                                                     s/Any s/Any}]])
 
 (def schema-check
   "check the schema before any app code sees the revent"
