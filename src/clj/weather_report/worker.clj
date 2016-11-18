@@ -1,7 +1,8 @@
 (ns weather-report.worker
   (:require [bones.stream.kafka :as kafka]
             [bones.stream.redis :as redis]
-            [bones.stream.core :as stream]))
+            [bones.stream.core :as stream]
+            [com.stuartsierra.component :as component]))
 
 
 (defn write-account-message [redis message]
@@ -13,13 +14,27 @@
     (redis/publish redis "accounts" {:account/evo-id (get v "evo-id")
                                      :account/xact-id k})))
 
-(defn connect [sys]
-  (let [consumer (:consumer @sys)
-        redis (:redis @sys)]
-    ;; todo how to start from beginning
-    ;; todo set group-id
-    ;; returns future, never realized
-    ;; do deferreds consume memory if never derefed?
-    (kafka/consume consumer
-                   "accounts"
-                   (partial write-account-message redis))))
+(defrecord Worker [conf consumer redis]
+  component/Lifecycle
+  (start [cmp]
+    (let [consumer (:consumer cmp)
+          redis (:redis cmp)]
+      ;; use conf for group-id
+      ;; todo how to start from beginning
+      ;; returns future, never realized
+      (kafka/consume consumer
+                     "accounts"
+                     (partial write-account-message redis))
+      (assoc cmp :accounts-worker :working)))
+  (stop [cmp]
+    ;; nothing to do here
+    (assoc cmp :accounts-worker nil)))
+
+(defn build-system
+  "incorporate Worker into system and declare dependencies"
+  [sys config]
+  ;; consumer and redis are from bones.stream
+  (swap! sys #(-> %
+                  (assoc :conf config)
+                  (assoc :worker (component/using (map->Worker {}) [:conf :consumer :redis])))))
+

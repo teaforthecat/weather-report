@@ -29,6 +29,7 @@
 
 (defrecord Redis [conf spec channel-prefix]
   component/Lifecycle
+  ;; idempontent start/stop not needed
   (start [cmp]
     (let [config (get-in cmp [:conf :stream :redis])
           {:keys [spec channel-prefix]

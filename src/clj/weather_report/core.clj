@@ -34,8 +34,7 @@
   )
 
 (defn format-event [request message]
-  {;;:event "account-change"
-   ;; must register handler for each event type
+  {;; event-types not supported
    :data message})
 
 (defn event-stream [request auth-info]
@@ -70,11 +69,6 @@
 (def query-schema {(s/optional-key :accounts) s/Any
                    (s/optional-key :account) s/Int})
 
-(comment
-  (query-handler {:accounts :all} {} {})
-  (query-handler {:account 456} {} {})
-  )
-
 (def conf
   (bc/map->Conf
    ;; WR_ENV is a made up environment variable to set in a deployed environment.
@@ -94,24 +88,26 @@
 
 (defn init-system [config]
   (http/build-system sys config)
-  (stream/build-system sys config))
+  (stream/build-system sys config)
+  (worker/build-system sys config))
 
 (defn -main
-  "The entry-point for 'lein run'"
+  "The entry-point for 'lein trampoline run'"
   [& args]
-  ;; join? true will block the caller forever
-  (init-system (assoc-in conf [:http/service :join?] true))
-  (stream/start sys)
-  (worker/connect sys)
-  ;; this will block, must come last
-  (http/start sys))
+  (.addShutdownHook (Runtime/getRuntime)
+                    (Thread. (fn []
+                               (println "Shutting down...")
+                               (swap! sys component/stop-system))))
+
+  (init-system conf)
+  (swap! sys component/start-system))
 
 (comment
   ;; for the repl
   (println "hi")
   (init-system conf)
   (stream/start sys)
-  (worker/connect sys)
+  (worker/start sys)
   (http/start sys)
   (user/fig) ; frontend process
   (user/cljs) ; switch to browser repl `:cljs/quit' to switch back
