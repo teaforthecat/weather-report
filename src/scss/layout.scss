@@ -1,0 +1,90 @@
+html, body {
+  height: 100%;
+  width: 100%;
+}
+
+// Wrapper
+#wrap {
+  @extend .flexer;
+  background: #fff;
+  margin: 0;
+  min-height: 100%;
+  min-width: 632px;
+  position: relative;
+  width: 100%;
+  z-index: 2;
+}
+
+// 3 Column (with secondary nav)
+#primary-navigation {
+  background: $brand-dark-blue;
+  flex: none;
+  padding-bottom: 30px;
+  width: 245px;
+
+  #logo {
+    background: url(image-path('logos/govd-logo-white.svg')) no-repeat;
+    background-position: 15px 18px;
+    background-size: 175px 44px;
+    display: block;
+    height: 84px;
+    text-indent: -9999px;
+    width: 100%;
+  }
+
+  .bulletins {
+    margin-top: 20px;
+  }
+}
+
+#main {
+  position: relative;
+  z-index: 3;
+  min-height: 950px;
+  height: auto !important;
+  width: auto;
+  flex: 1;
+}
+
+.main-container {
+  flex: 1;
+  max-width: 960px;
+  padding-left: 35px;
+}
+
+body.modal_window {
+  #main {
+    margin: 0;
+  }
+
+  #header_container, #primary-navigation, #secondary-navigation, #footer {
+    display: none;
+  }
+}
+
+#main-flex {
+  -webkit-flex: auto;
+          flex: auto;
+}
+
+#secondary-navigation {
+  margin: 0 40px;
+  width: 160px;
+  z-index: 1001;
+}
+
+.main-contain {
+  max-width: 1100px;
+}
+
+// 2 Column
+body.no-secondary-nav {
+  .main-container {
+    margin-right: 40px;
+    max-width: 1100px;
+  }
+
+  #secondary-navigation {
+    display: none;
+  }
+}

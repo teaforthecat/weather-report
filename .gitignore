@@ -8,3 +8,5 @@ logs/
 /.nrepl-port
 /data/
 /tmp/
+/node_modules
+/.sass-cache

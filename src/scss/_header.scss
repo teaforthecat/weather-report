@@ -1,0 +1,143 @@
+#header {
+  .breadcrumb-title {
+    padding-top: 27px;
+  }
+
+  h1 {
+    display: inline-block;
+    font-family: 'opensanssemibold';
+    font-size: 18px;
+    line-height: 1.35;
+    margin: 0;
+  }
+
+  #breadcrumbs {
+    display: inline-block;
+    font-family: 'opensanslight';
+    font-size: 18px;
+
+    a, a:visited {
+      color: $gray;
+    }
+
+    li {
+      display: inline-block;
+      position: relative;
+      margin-right: 15px;
+      padding-right: 25px;
+
+      &:after {
+        color: $lighter-gray;
+        content: "/";
+        font-family: 'opensanslight';
+        position: absolute;
+        right: 0;
+      }
+    }
+  }
+
+  #admin-nav {
+    list-style: none;
+
+    // Move to Shamrock
+    .navbar > li {
+      display: inline-block;
+
+      & > a {
+        color: $gray;
+        display: inline-block;
+        padding: 30px;
+      }
+
+      .help-with-page {
+        border-right: 1px solid #e6e6e6;
+        margin-right: 20px;
+      }
+    }
+
+    .sr-dropdown-link {
+      color: $gray;
+      cursor: pointer;
+      display: block;
+      text-decoration: none;
+
+      .user-short-name {
+        display: block;
+        float: left;
+        max-width: 175px;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+
+      &:hover {
+        color: $brand-dark-blue;
+      }
+
+      .icon-chevron-down-light {
+        font-size: 13px;
+        padding-left: 7px;
+      }
+    }
+
+    .sr-dropdown-menu {
+      border: 1px solid $border-color;
+      border-radius: 2px;
+      margin: 15px -15px 0;
+      padding: 0;
+      width: 275px;
+
+      .heading {
+        color: $gray;
+        text-transform: uppercase;
+        letter-spacing: 1.2px;
+        font-size: 12px;
+        font-weight: 700;
+        padding: 17px 20px 5px 20px;
+      }
+
+      .last-item {
+        padding-bottom: 12px;
+      }
+
+      .separator {
+        border-top: 1px solid rgba(0,0,0,0.15);
+      }
+
+      & > li > a {
+        padding: 5px 20px;
+        color: $brand-dark-blue;
+        background-color: transparent;
+
+        &:hover {
+          color: #fff;
+          background-color: $brand-dark-blue;
+        }
+
+        &.tall {
+          padding: 15px 20px;
+        }
+
+        & > i {
+          margin-right: 7px;
+          font-size: 16px;
+        }
+
+        & > span {
+          vertical-align: 10%;
+        }
+      }
+    }
+  }
+}
+
+#account-name {
+  color: $gray;
+  font-size: 18px;
+  padding: 17px 20px 10px 20px;
+}
+
+#header_container {
+  border-bottom: 1px solid #e6e6e6;
+  margin-bottom: 35px;
+}

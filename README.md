@@ -14,6 +14,11 @@ Put this in your Emacs config file:
 
 Navigate to a clojurescript file and start a figwheel REPL with `cider-jack-in-clojurescript` or (`C-c M-J`)
 
+### CSS development
+
+    npm install
+    sass -I node_modules --watch src/scss:resources/public/css
+
 ### Run application:
 
 ```

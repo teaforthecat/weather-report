@@ -1,0 +1,13 @@
+@import 'shamrock/src/styles/shamrock';
+@import 'layout';
+@import 'header';
+
+ol.form {
+    li {
+        /* missing from shamrock forms */
+        input[type="password"].short {
+            width: 200px;
+        }
+
+    }
+}

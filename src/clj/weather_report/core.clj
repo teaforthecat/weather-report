@@ -105,10 +105,11 @@
 (comment
   ;; for the repl
   (println "hi")
-  (init-system conf)
-  (stream/start sys)
-  (worker/start sys)
-  (http/start sys)
+  ;; (init-system conf)
+  ;; (stream/start sys)
+  ;; (worker/start sys)
+  ;; (http/start sys)
+  (-main)
   (user/fig) ; frontend process
   (user/cljs) ; switch to browser repl `:cljs/quit' to switch back
 

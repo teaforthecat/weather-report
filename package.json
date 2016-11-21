@@ -1,0 +1,4 @@
+{"name": "weather-report",
+ "dependencies": {
+     "shamrock": "git+http://git@dev-scm.office.gdi/development/shamrock.git#v13.3.1"
+ }}

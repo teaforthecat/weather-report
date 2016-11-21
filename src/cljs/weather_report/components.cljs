@@ -6,26 +6,34 @@
              [reagent-forms.core :refer [bind-fields bind init-field]]
              [re-frame.core :refer [dispatch subscribe]]))
 
+(defn small-button [label event]
+  (button label event "small" "borderless"))
+
 (defn remove-btn [id]
   [:div.actions
-   [:button.remove {:on-click #(dispatch [:request/command
-                                          :add-account
-                                          {:account/xact-id (int id)
-                                           :account/evo-id nil}])}
-    "Remove"]])
+   (small-button "Remove" [:request/command
+                     :add-account
+                     {:account/xact-id (int id)
+                      :account/evo-id nil}])])
 
 (defn account-li [{:keys [:account/xact-id :account/evo-id]}]
-  [:li
-   [:span xact-id]
-   [:span " => "]
-   [:span evo-id]
-   [remove-btn xact-id]])
+  [:tr
+   [:td.center xact-id]
+   [:td.center  evo-id]
+   [:td.center
+    [remove-btn xact-id]]])
 
 (defn accounts-list []
   (let [accounts (subscribe [:accounts])]
     (fn []
-      [:div.accounts-list
-       (into [:ul] (map account-li @accounts))])))
+      [:table.accounts-list.data-table
+       [:thead
+        [:tr
+         [:th "Xact ID"]
+         [:th "Evo ID"]
+         [:th "controls"]]]
+       [:tbody
+        (map account-li @accounts)]])))
 
 (defn toggle [subs true-form false-form]
   (let [t (subscribe subs)]
@@ -35,7 +43,7 @@
         false-form))))
 
 (defn form [f header fields buttons]
-  [:div.form
+  [:ol.form
    header
    [bind-fields
     (into [:div.fields] fields)
@@ -43,7 +51,7 @@
    buttons])
 
 (defn field [id label & {:as opts}]
-  [:div.form-group.has-feedback {:field :container}
+  [:li.form-group.has-feedback {:field :container}
 
    ;; the label can change
    [:label.control-label {:for id
@@ -51,7 +59,7 @@
                           :id [:errors id :label]
                           :field :label}]
    ;; the input finally
-   [:input.form-control {:id id
+   [:input.short.form-control {:id id
                          :aria-describedby [:errors id :aria]
                          :type (or (:type opts) :text)
                          :field (or (:field opts) :text)}]
@@ -90,19 +98,25 @@
 (defn login-form []
   (toggle [:component/toggle :login-form]
           (let [f (reagent/atom {})]
-            (form f
-                  [:h3 "Login Form"]
-                  [
-                   (field :username "Username")
-                   (field :password "Password" :type :password)
-                   ]
-                  [:div.buttons
-                   (button "Cancel" [:component/hide :login-form #(reset! f {})])
-                   (button "Submit" [:request/login @f])
-                   ]))
+            [:div.sr-modal
+             [:div.sr-modal-dialog
+              [:div.sr-modal-header
+               [:div.sr-modal-title
+                "Login"]]
+              [:div.sr-modal-body
+               (form f
+                     [:span] ;; placeholder
+                     [
+                      (field :username "Username")
+                      (field :password "Password" :type :password)
+                      ]
+                     [:div.buttons
+                      (button "Cancel" [:component/hide :login-form #(reset! f {})])
+                      (button "Submit" [:request/login @f] )
+                      ])]]])
           (button "Login" [:component/show :login-form])))
 
 (defn login []
   (toggle [:bones/logged-in?]
-          (button "Logout" [:request/logout])
+          (small-button "Logout" [:request/logout])
           [login-form]))
