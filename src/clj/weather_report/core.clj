@@ -13,7 +13,9 @@
 (def sys (atom {}))
 
 (defn login [args req]
-  {:user-id 123 :roles ["tester"]})
+  (if (= "fail" (:username args))
+    nil
+    {:user-id 123 :roles ["tester"]}))
 
 (def login-schema {:username s/Str :password s/Str})
 
@@ -105,15 +107,12 @@
 (comment
   ;; for the repl
   (println "hi")
-  ;; (init-system conf)
-  ;; (stream/start sys)
-  ;; (worker/start sys)
-  ;; (http/start sys)
-  (-main)
+  (-main) ; backend process
   (user/fig) ; frontend process
   (user/cljs) ; switch to browser repl `:cljs/quit' to switch back
+  :cljs/quit
 
-  (http/stop sys)
-  (stream/stop sys)
+  (swap! sys component/stop-system)
+  (swap! sys component/start-system)
 
   )
