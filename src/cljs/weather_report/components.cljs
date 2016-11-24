@@ -1,20 +1,36 @@
 (ns weather-report.components
-  (:require-macros [weather-report.macros :refer [button]])
   (:require  [weather-report.subs]
              [weather-report.handlers]
              [reagent.core :as reagent]
+             [clojure.string :refer [join]]
              [reagent-forms.core :refer [bind-fields bind init-field]]
              [re-frame.core :refer [dispatch subscribe]]))
 
-(defn small-button [label event]
-  (button label event "small" "borderless"))
+(defn button [label event {:as attrs :or {}}]
+  (let [with-class (update attrs :class str " sr-button")
+        attributes (assoc with-class :on-click #(dispatch event))]
+    [:button attributes label]))
+
+(defn small-button [label event & {:as attrs}]
+  (button label event (update attrs :class str " small borderless" )))
+
+(defn transition [cmp & attrs]
+  [:component/transition cmp #(apply assoc % attrs)])
+
+(defn command [cmd args & {:as tap}]
+  [:request/command cmd args tap])
+
+(defn submit [cmd form errors]
+  (command cmd @form :errors errors :form form))
+
+(defn cancel [cmp]
+  (transition cmp :show false :form {} :errors {}))
 
 (defn remove-btn [id]
   [:div.actions
-   (small-button "Remove" [:request/command
-                     :add-account
-                     {:account/xact-id (int id)
-                      :account/evo-id nil}])])
+   (small-button "Remove" (command :add-account ;; nil evo-id removes
+                                   {:account/xact-id (int id)
+                                    :account/evo-id nil}))])
 
 (defn account-li [{:keys [:account/xact-id :account/evo-id]}]
   ^{:key xact-id}
@@ -23,6 +39,12 @@
    [:td.center  evo-id]
    [:td.center
     [remove-btn xact-id]]])
+
+(def accounts-empty
+  [:tr
+   [:td.center]
+   [:td.center "no accounts"]
+   [:td.center]])
 
 (defn accounts-list []
   (let [accounts (subscribe [:accounts])]
@@ -34,7 +56,9 @@
          [:th "Evo ID"]
          [:th "controls"]]]
        [:tbody
-        (map account-li @accounts)]])))
+        (if (empty? @accounts)
+          accounts-empty
+          (map account-li @accounts))]])))
 
 (defn toggle [subs true-form false-form]
   (let [t (subscribe subs)]
@@ -91,14 +115,15 @@
                      :type :number)
               ]
              [:div.buttons
-              (button "Cancel" [:component/hide :add-account #(reset! f {})])
-              (button "Submit" [:request/command :add-account @f {:errors errors :form f}])
+              (button "Cancel" (cancel :add-account) {})
+              ;; the command and component happen to have the same name
+              (button "Submit" (submit :add-account f errors) {})
               ]))]))
 
 (defn add-account []
-  (toggle [:component/toggle :add-account]
+  (toggle [:components :add-account :show]
           (add-account-form)
-          (button "Add Account" [:component/show :add-account])))
+          (button "Add Account" (transition :add-account :show true) {})))
 
 (defn login-form []
   (toggle [:components :login-form :show]
@@ -113,16 +138,16 @@
                  [:div.sr-modal-body
                   (form f
                         [:span
-                         (:message @errors)] ;; placeholder
+                         (:message @errors)]
                         [
                          (field :username "Username")
                          (field :password "Password" :type :password)
                          ]
                         [:div.buttons
-                         (button "Cancel" [ :component/transition :login-form #(assoc % :show false :form {} :errors {})])
-                         (button "Submit" [:request/login @f {:errors errors}])
+                         (button "Cancel" (cancel :login-form) {})
+                         (button "Submit" [:request/login @f {:errors errors}] {})
                          ])]]])])
-          (button "Login" [:component/transition :login-form #(assoc % :show true)])))
+          (button "Login" (transition :login-form :show true) {})))
 
 (defn login []
   (toggle [:bones/logged-in?]
