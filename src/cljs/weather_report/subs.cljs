@@ -28,3 +28,15 @@
  (fn [db [_ component-name]]
    (reaction (get-in @db [:components component-name :show]))))
 
+(re-frame/register-sub
+ :components
+ (fn [db [_ component-name attr]]
+   (-> @db
+       :components
+       ;; reaction
+       component-name
+       ;; reaction
+       attr
+       reaction)
+
+   #_(reaction (get-in @db [:components component-name attr]))))

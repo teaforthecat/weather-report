@@ -101,9 +101,9 @@
           (button "Add Account" [:component/show :add-account])))
 
 (defn login-form []
-  (toggle [:component/toggle :login-form]
-          (let [f (reagent/atom {})
-                errors (reagent/atom {})]
+  (toggle [:components :login-form :show]
+          (let [f (subscribe [:components :login-form :form])
+                errors (subscribe [:components :login-form :errors])]
             [(fn []
                [:div.sr-modal
                 [:div.sr-modal-dialog
@@ -119,10 +119,10 @@
                          (field :password "Password" :type :password)
                          ]
                         [:div.buttons
-                         (button "Cancel" [:component/hide :login-form #(reset! f {})])
+                         (button "Cancel" [ :component/transition :login-form #(assoc % :show false :form {} :errors {})])
                          (button "Submit" [:request/login @f {:errors errors}])
                          ])]]])])
-          (button "Login" [:component/show :login-form])))
+          (button "Login" [:component/transition :login-form #(assoc % :show true)])))
 
 (defn login []
   (toggle [:bones/logged-in?]

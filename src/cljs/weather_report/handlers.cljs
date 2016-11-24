@@ -41,14 +41,33 @@
    (if callback (callback))
    (assoc-in db [:components component-name :show] false)))
 
+(re-frame/register-handler
+ :component/transition
+ mids
+ (fn [db [component-name update-fn]]
+   (update-in db [:components component-name] update-fn)))
+
+(comment
+  (re-frame.core/dispatch [:component/transition :login-form #(assoc % :show true)])
+  (re-frame.core/dispatch [:component/transition :login-form #(assoc % :show false)])
+
+  (re-frame.core/dispatch [:request/logout])
+  (println
+   (get-in @re-frame.db/app-db [:components :login-form ])
+
+   )
+
+  )
+
 (defn request-query-handler [db [params tap]]
   (let [c (:client @(:sys db))]
     (client/query c params tap))
   db)
 
 (defn request-command-handler [db [command args tap callback]]
-  (let [c (:client @(:sys db))]
-    (client/command c command args tap))
+  (let [c (:client @(:sys db))
+        more-tap (assoc tap :command command :args args)]
+    (client/command c command args more-tap))
   db)
 
 (defn request-login-handler [db [fields tap]]
@@ -99,9 +118,15 @@
   (cond
     (= 200 status)
     (do
-      (reset! (:form tap) {})
-      (reset! (:errors tap) {})
-      (re-frame/dispatch [:component/hide :add-account]))
+      (let [cmp (:command tap)]
+        ;; the command happens to match the component
+        (re-frame/dispatch [:component/transition
+                            cmp
+                            #(assoc %
+                                    :show false
+                                    :form {}
+                                    :errors {})]))
+      )
     (= 400 status)
     (let [invalid-args (:args response)]
       (cond
