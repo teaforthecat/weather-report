@@ -30,12 +30,14 @@
 
 (re-frame/register-handler
  :component/show
- (fn [db [_ component-name]]
+ mids
+ (fn [db [component-name]]
    (assoc-in db [:components component-name :show] true)))
 
 (re-frame/register-handler
  :component/hide
- (fn [db [_ component-name callback]]
+ mids
+ (fn [db [component-name callback]]
    (if callback (callback))
    (assoc-in db [:components component-name :show] false)))
 
@@ -46,8 +48,7 @@
 
 (defn request-command-handler [db [command args tap callback]]
   (let [c (:client @(:sys db))]
-    (client/command c command args tap)
-    (if callback (callback)))
+    (client/command c command args tap))
   db)
 
 (defn request-login-handler [db [fields tap]]
@@ -78,6 +79,9 @@
                           (re-frame/dispatch [:request/query {:accounts :all}])
                           (re-frame/dispatch [:component/hide :login-form])
                           true)
+                    401 (do
+                          (swap! (:errors tap) assoc :message "Username or Password are incorrect")
+                          false)
                     (do
                       (js/console.log "error!")
                       false))]
@@ -92,8 +96,27 @@
     db))
 
 (defn response-command-handler [db [response status tap]]
-  (if (= 200 status)
-    (re-frame/dispatch [:component/hide :add-account]))
+  (cond
+    (= 200 status)
+    (do
+      (reset! (:form tap) {})
+      (reset! (:errors tap) {})
+      (re-frame/dispatch [:component/hide :add-account]))
+    (= 400 status)
+    (let [invalid-args (:args response)]
+      (cond
+        (= 'missing-required-key (get-in invalid-args [:account/xact-id]))
+        (swap! (:errors tap) assoc :message "Xact-id is required")
+
+        (= 'missing-required-key (get-in invalid-args [:account/evo-id]))
+        (swap! (:errors tap) assoc :message "Evo-id is required")
+
+        (= '(not (integer? nil)) (get-in invalid-args [:account/xact-id]))
+        (swap! (:errors tap) assoc :message "xact-id must be an integer")
+
+        (= '(not (integer? nil)) (get-in invalid-args [:account/evo-id]))
+        (swap! (:errors tap) assoc :message "Evo-id must be an integer")
+        )))
   db)
 
 (defn response-query-handler [db [response status tap]]

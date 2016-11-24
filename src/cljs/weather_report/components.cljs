@@ -17,6 +17,7 @@
                       :account/evo-id nil}])])
 
 (defn account-li [{:keys [:account/xact-id :account/evo-id]}]
+  ^{:key xact-id}
   [:tr
    [:td.center xact-id]
    [:td.center  evo-id]
@@ -72,23 +73,27 @@
    ])
 
 (defn add-account-form []
-  (let [f (reagent/atom {})]
-    (form f
-          [:h3 "Add Account"]
-          [
-           (field :account/xact-id
-                  "Xact Account ID"
-                  :field :numeric
-                  :type :number)
-           (field :account/evo-id
-                  "Evo Account ID"
-                  :field :numeric
-                  :type :number)
-           ]
-          [:div.buttons
-           (button "Cancel" [:component/hide :add-account #(reset! f {})])
-           (button "Submit" [:request/command :add-account @f {} #(reset! f {})])
-           ])))
+  (let [f (reagent/atom {})
+        errors (reagent/atom {})]
+    [(fn []
+       (form f
+             [:div
+              [:h3 "Add Account"]
+              [:p (:message @errors)]]
+             [
+              (field :account/xact-id
+                     "Xact Account ID"
+                     :field :numeric
+                     :type :number)
+              (field :account/evo-id
+                     "Evo Account ID"
+                     :field :numeric
+                     :type :number)
+              ]
+             [:div.buttons
+              (button "Cancel" [:component/hide :add-account #(reset! f {})])
+              (button "Submit" [:request/command :add-account @f {:errors errors :form f}])
+              ]))]))
 
 (defn add-account []
   (toggle [:component/toggle :add-account]
@@ -97,23 +102,26 @@
 
 (defn login-form []
   (toggle [:component/toggle :login-form]
-          (let [f (reagent/atom {})]
-            [:div.sr-modal
-             [:div.sr-modal-dialog
-              [:div.sr-modal-header
-               [:div.sr-modal-title
-                "Login"]]
-              [:div.sr-modal-body
-               (form f
-                     [:span] ;; placeholder
-                     [
-                      (field :username "Username")
-                      (field :password "Password" :type :password)
-                      ]
-                     [:div.buttons
-                      (button "Cancel" [:component/hide :login-form #(reset! f {})])
-                      (button "Submit" [:request/login @f] )
-                      ])]]])
+          (let [f (reagent/atom {})
+                errors (reagent/atom {})]
+            [(fn []
+               [:div.sr-modal
+                [:div.sr-modal-dialog
+                 [:div.sr-modal-header
+                  [:div.sr-modal-title
+                   "Login"]]
+                 [:div.sr-modal-body
+                  (form f
+                        [:span
+                         (:message @errors)] ;; placeholder
+                        [
+                         (field :username "Username")
+                         (field :password "Password" :type :password)
+                         ]
+                        [:div.buttons
+                         (button "Cancel" [:component/hide :login-form #(reset! f {})])
+                         (button "Submit" [:request/login @f {:errors errors}])
+                         ])]]])])
           (button "Login" [:component/show :login-form])))
 
 (defn login []

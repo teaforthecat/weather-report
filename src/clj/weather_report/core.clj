@@ -13,9 +13,10 @@
 (def sys (atom {}))
 
 (defn login [args req]
-  (if (= "fail" (:username args))
-    nil
-    {:user-id 123 :roles ["tester"]}))
+  (if (= "abc" (:username args))
+    {:user-id 123 :roles ["tester"]}
+    nil ;; 401
+    ))
 
 (def login-schema {:username s/Str :password s/Str})
 
@@ -71,7 +72,7 @@
 (def query-schema {(s/optional-key :accounts) s/Any
                    (s/optional-key :account) s/Int})
 
-(def conf
+(defn conf []
   (bc/map->Conf
    ;; WR_ENV is a made up environment variable to set in a deployed environment.
    ;; The resolved file can be used to override the secret (and everything else in conf)
@@ -86,7 +87,7 @@
     :stream {:serialization-format :json-plain}}))
 
 (comment
-  (component/start conf))
+  (component/start (conf)))
 
 (defn init-system [config]
   (http/build-system sys config)
@@ -101,7 +102,7 @@
                                (println "Shutting down...")
                                (swap! sys component/stop-system))))
 
-  (init-system conf)
+  (init-system (conf))
   (swap! sys component/start-system))
 
 (comment
