@@ -92,17 +92,6 @@
                     :event-stream event-stream}
     :stream {:serialization-format :json-plain}}))
 
-(comment
-  (conf/copy-values
-   (merge-with conf/merge-maps {:http/service false}
-               (conf/read-conf-data ["config/common.edn" "config/ldap.edn" "config/$WR_ENV.edn"]))
-   [])
-
-  (:ldap  (component/start (conf)))
-  (component/stop (conf))
-
-  )
-
 (defn build-system [system config]
   (let [cmp (if true #_(= "some-condition" "is-true")
               (component/using (auth/map->LDAP {}) [:conf])

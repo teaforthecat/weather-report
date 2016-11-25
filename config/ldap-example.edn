@@ -4,10 +4,11 @@
           {:address "stpdc5.stp01.office.gdi"}]
    :bind-dn "CN=LDAP Bind,OU=Service Accounts,OU=User Accounts,OU=STP01,DC=stp01,DC=office,DC=gdi"
    :password "-redacted-"
-   :timeout         10000
-   :connect-timeout 10000
+   :timeout         5000
+   :connect-timeout 5000
    :ssl?            true}
   :auth {:user-domain "stp01.office.gdi"
          :search-base "OU=STP01,DC=stp01,DC=office,DC=gdi"
          :search-attribute "sAMAccountName"
+         :attributes [:mail :displayName :msSFU30PosixMemberOf]
          }}}

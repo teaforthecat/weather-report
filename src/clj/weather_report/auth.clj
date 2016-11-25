@@ -19,7 +19,7 @@
      :display-name displayName
      :groups groups}))
 
-(defn ldap-search [ldap-pool username password attributes user-domain search-base search-attribute]
+(defn ldap-search [ldap-pool username password {:keys [attributes user-domain search-base search-attribute] :as search-info}]
   (let [conn           (ldap/get-connection ldap-pool)
         qualified-name (if user-domain (str username "@" user-domain) username)]
     (try
@@ -27,7 +27,7 @@
         (first (ldap/search conn
                             search-base
                             {:filter     (str search-attribute "=" username)
-                             :attributes  attributes})))
+                             :attributes attributes})))
       (finally (ldap/release-connection ldap-pool conn)))))
 
 (defprotocol LDAPAuth
@@ -55,9 +55,10 @@
     (let [{:keys [attributes user-domain search-base search-attribute]
            :or {attributes [:mail]
                 search-attribute "sAMAccountName"}
-           :as search-info} (:search-info cmp)]
-      (format-auth-info
-       (ldap-search (:pool cmp) username password search-info)))))
+           :as search-info} (:search-info cmp)
+          result (ldap-search (:pool cmp) username password search-info)]
+      (if result
+        (format-auth-info result)))))
 
 (defrecord FakeLDAP [conf]
   component/Lifecycle
