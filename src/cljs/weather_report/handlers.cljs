@@ -80,11 +80,21 @@
                           (client/stop sys)
                           (client/start sys)
                           (re-frame/dispatch [:request/query {:accounts :all}])
-                          (re-frame/dispatch [:component/hide :login-form])
+                          ;; reset form
+                          (re-frame/dispatch [:component/transition
+                                              :login-form
+                                              #(assoc % :errors {} :form {} :show false)])
                           true)
                     401 (do
                           (swap! (:errors tap) assoc :message "Username or Password are incorrect")
                           false)
+                    500 (do
+                         (re-frame/dispatch [:component/transition
+                                             :login-form
+                                             #(assoc % :errors
+                                                     {:message "There was a problem communicating with the server"})])
+                          false)
+
                     (do
                       (js/console.log "error!")
                       false))]

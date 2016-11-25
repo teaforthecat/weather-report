@@ -16,6 +16,8 @@
                  ;; bones cljs
                  [reagent-forms "0.5.24"]
                  [bones/client "0.2.2"]
+                 ;; domain specific
+                 [org.clojars.pntblnk/clj-ldap "0.0.12"]
                  ]
 
   :plugins [[lein-cljsbuild "1.1.3"]]

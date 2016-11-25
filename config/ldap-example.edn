@@ -1,0 +1,11 @@
+{:ldap
+ {:con
+  {:host [{:address "stpdc6.stp01.office.gdi"}
+          {:address "stpdc5.stp01.office.gdi"}]
+   :bind-dn "CN=LDAP Bind,OU=Service Accounts,OU=User Accounts,OU=STP01,DC=stp01,DC=office,DC=gdi"
+   :password "-redacted-"
+   :timeout         10000
+   :connect-timeout 10000
+   :ssl?            true}
+  :ldap-auth {:user-base-dn "OU=STP01,DC=stp01,DC=office,DC=gdi"
+              :user-domain "stp01.office.gdi"}}}
