@@ -7,5 +7,7 @@
    :timeout         10000
    :connect-timeout 10000
    :ssl?            true}
-  :ldap-auth {:user-base-dn "OU=STP01,DC=stp01,DC=office,DC=gdi"
-              :user-domain "stp01.office.gdi"}}}
+  :auth {:user-domain "stp01.office.gdi"
+         :search-base "OU=STP01,DC=stp01,DC=office,DC=gdi"
+         :search-attribute "sAMAccountName"
+         }}}

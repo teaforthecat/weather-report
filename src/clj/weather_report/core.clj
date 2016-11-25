@@ -3,97 +3,24 @@
   (:require [com.stuartsierra.component :as component]
             [schema.core :as s]
             [manifold.stream :as ms]
-            [clj-ldap.client :as ldap]
             [bones.conf :as bc]
             [bones.http :as http]
             [bones.stream.core :as stream]
             [bones.stream.kafka :as kafka]
             [bones.stream.redis :as redis]
+            [weather-report.auth :as auth]
             [weather-report.worker :as worker]
             [clojure.string :as string]
             [bones.conf :as conf]))
 
 (def sys (atom {}))
 
-(defn ldap-auth [ldap-pool username password attributes]
-  (let [conn           (ldap/get-connection ldap-pool)
-        qualified-name (str username "@" "stp01.office.gdi")]
-    (try
-      (if (ldap/bind? conn qualified-name password)
-        (first (ldap/search conn
-                            "OU=STP01,DC=stp01,DC=office,DC=gdi"
-                            {:filter     (str "sAMAccountName=" username)
-                             :attributes  attributes})))
-      (finally (ldap/release-connection ldap-pool conn)))))
-
-
-(defprotocol LDAPAuth
-  (authenticate [this username password attributes]))
-
-(defrecord LDAP [conf]
-  component/Lifecycle
-  (start [cmp]
-         (if-let [ldap-conf (get-in cmp [:conf :ldap :con])]
-           (assoc cmp :pool (ldap/connect ldap-conf))
-           (assoc cmp :pool nil)))
-  (stop [cmp]
-        (if-let [pool (:pool cmp)]
-          (do
-            (ldap/close pool)
-            (assoc cmp pool nil))
-          cmp))
-  LDAPAuth
-  (authenticate [cmp username password attributes]
-                (ldap-auth (:pool cmp) username password attributes)))
-
-(comment
-
-  (def ldap-pool
-    (ldap/connect host))
-
- (ldap/who-am-i ldap-pool)
-  (ldap/close ldap-pool)
-
-
-  (def result  (authenticate "" ""))
-  (:cn result)
-  (:mail result)
-  (:displayName result)
-
-
-  (def groups
-    (->> result
-         (:msSFU30PosixMemberOf)
-         (map #(string/split % #","))
-         (map first)
-         (map #(string/split % #"="))
-         (map second)
-         ))
-
-  ) ;; comment
-
-(defn parse-group [memberOf]
-  (-> memberOf
-   (string/split #",")
-   first
-   (string/split #"=")
-   second))
-
-(defn format-auth-info
-  "extract info from Active Directory user info based on visual scan"
-  [{:keys [mail displayName msSFU30PosixMemberOf]}]
-  (let [groups (map parse-group msSFU30PosixMemberOf)]
-    {:email mail
-     :display-name displayName
-     :groups groups}))
-
 (defn login [args req]
   (let [conn (get-in @sys [:ldap])]
-    (if-let [result (authenticate conn
+    (if-let [result (auth/authenticate conn
                                   (:username args)
-                                  (:password args)
-                                  [:mail :displayName :msSFU30PosixMemberOf])]
-      (format-auth-info result)
+                                  (:password args))]
+      result
       nil ;; 401
       )))
 
@@ -177,7 +104,10 @@
   )
 
 (defn build-system [system config]
-  (swap! system assoc :ldap (component/using (map->LDAP {}) [:conf])))
+  (let [cmp (if true #_(= "some-condition" "is-true")
+              (component/using (auth/map->LDAP {}) [:conf])
+              (component/using (auth/map->FakeLDAP {}) [:conf]))]
+    (swap! system assoc :ldap cmp)))
 
 (defn init-system [config]
   (build-system sys config)
