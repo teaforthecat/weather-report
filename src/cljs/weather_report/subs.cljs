@@ -1,6 +1,7 @@
 (ns weather-report.subs
   (:require-macros [reagent.ratom :refer [reaction]])
-  (:require [re-frame.core :as re-frame]))
+  (:require [re-frame.core :as re-frame]
+            [weather-report.local-storage :as storage]))
 
 
 (re-frame/register-sub
@@ -30,13 +31,5 @@
 
 (re-frame/register-sub
  :components
- (fn [db [_ component-name attr]]
-   (-> @db
-       :components
-       ;; reaction
-       component-name
-       ;; reaction
-       attr
-       reaction)
-
-   #_(reaction (get-in @db [:components component-name attr]))))
+ (fn [db args]
+   (reaction (get-in @db args))))

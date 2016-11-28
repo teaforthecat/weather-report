@@ -39,9 +39,20 @@
   (if callback (callback))
   (assoc-in db [:components component-name :show] false))
 
+(defmethod handler :component/set
+  [db [channel component-name component-value]]
+  (assoc-in db [:components component-name] component-value))
+
 (defmethod handler :component/transition
   [db [channel component-name update-fn]]
   (update-in db [:components component-name] update-fn))
+
+(defmethod handler :component/store
+  [db [channel component-name component-value]]
+  (db/set-storage-item component-name component-value)
+  (re-frame/dispatch [:component/set component-name component-value])
+  db)
+
 
 (defmethod handler :request/command
   [db [channel command args tap callback]]
@@ -76,7 +87,7 @@
                     0 (do (client/stop sys)
                           false)
                     ;; start again to connect to event-stream
-                    200 (do
+                    200 (let [share (response "share")]
                           (client/stop sys)
                           (client/start sys)
                           (re-frame/dispatch [:request/query {:accounts :all}])
@@ -84,6 +95,8 @@
                           (re-frame/dispatch [:component/transition
                                               :login-form
                                               #(assoc % :errors {} :form {} :show false)])
+                         ;; store user-info because it is only available in the login response
+                          (re-frame/dispatch [:component/store :user-info share])
                           true)
                     401 (do
                           (swap! (:errors tap) assoc :message "Username or Password are incorrect")
@@ -106,6 +119,7 @@
   (if (= 200 status)
     (do
       (client/stop (:sys db))
+      (re-frame/dispatch [:component/store :user-info nil])
       (assoc db :bones/logged-in? false))
     db))
 
@@ -174,3 +188,18 @@
 ;; non-lazy initializer
 (doseq [h (keys (methods handler))]
   (register-channel h))
+
+;; maybe??
+;; to register a handler in another namespace use this
+(defmacro register
+  "register an event handler.
+   be sure to return the db in the function body.
+   be sure to match the signature for db and channel here:
+   usage: (register :some/event [db [channel event args...]]
+            (function body)
+            db)
+  "
+  [channel args & body]
+  `(do
+     (register-channel ~channel)
+     (defmethod handler ~channel ~args ~@body)))

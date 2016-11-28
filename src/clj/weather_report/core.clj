@@ -20,7 +20,7 @@
     (if-let [result (auth/authenticate conn
                                   (:username args)
                                   (:password args))]
-      result
+      (with-meta result {:share [:groups :display-name]})
       nil ;; 401
       )))
 
@@ -93,7 +93,7 @@
     :stream {:serialization-format :json-plain}}))
 
 (defn build-system [system config]
-  (let [cmp (if true #_(= "some-condition" "is-true")
+  (let [cmp (if (= "some-condition" "is-true")
               (component/using (auth/map->LDAP {}) [:conf])
               (component/using (auth/map->FakeLDAP {}) [:conf]))]
     (swap! system assoc :ldap cmp)))

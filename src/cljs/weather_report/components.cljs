@@ -149,6 +149,13 @@
                          ])]]])])
           (button "Login" (transition :login-form :show true) {})))
 
+(defn user-info []
+  (let [user-info (subscribe [:components :user-info])]
+    (fn []
+      (if @user-info
+        [:span.user-info (str "Hello " (:display-name @user-info))]
+        [:span]))))
+
 (defn login []
   (toggle [:bones/logged-in?]
           (small-button "Logout" [:request/logout])
