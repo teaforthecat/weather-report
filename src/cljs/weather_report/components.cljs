@@ -97,32 +97,32 @@
    ])
 
 (defn add-account-form []
-  (let [f (reagent/atom {})
-        errors (reagent/atom {})]
-    [(fn []
-       (form f
-             [:div
-              [:h3 "Add Account"]
-              [:p (:message @errors)]]
-             [
-              (field :account/xact-id
-                     "Xact Account ID"
-                     :field :numeric
-                     :type :number)
-              (field :account/evo-id
-                     "Evo Account ID"
-                     :field :numeric
-                     :type :number)
-              ]
-             [:div.buttons
-              (button "Cancel" (cancel :add-account) {})
-              ;; the command and component happen to have the same name
-              (button "Submit" (submit :add-account f errors) {})
-              ]))]))
+  (let [f (subscribe [:components :add-account :form])
+        errors (subscribe [:components :add-account :errors])]
+    (fn []
+      (form f
+            [:div
+             [:h3 "Add Account"]
+             [:p (:message @errors)]]
+            [
+             (field :account/xact-id
+                    "Xact Account ID"
+                    :field :numeric
+                    :type :number)
+             (field :account/evo-id
+                    "Evo Account ID"
+                    :field :numeric
+                    :type :number)
+             ]
+            [:div.buttons
+             (button "Cancel" (cancel :add-account) {})
+             ;; the command and component happen to have the same name
+             (button "Submit" (submit :add-account f errors) {})
+             ]))))
 
 (defn add-account []
   (toggle [:components :add-account :show]
-          (add-account-form)
+          [add-account-form]
           (button "Add Account" (transition :add-account :show true) {})))
 
 (defn login-form []
