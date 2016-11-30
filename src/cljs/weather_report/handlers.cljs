@@ -30,19 +30,6 @@
   [db [channel active-panel]]
   (assoc db :active-panel active-panel))
 
-(defmethod handler :component/show
-  [db [channel component-name]]
-  (assoc-in db [:components component-name :show] true))
-
-(defmethod handler :component/hide
-  [db [channel component-name callback]]
-  (if callback (callback))
-  (assoc-in db [:components component-name :show] false))
-
-(defmethod handler :component/set
-  [db [channel component-name component-value]]
-  (assoc-in db [:components component-name] component-value))
-
 (defmethod handler :component/transition
   [db [channel component-name update-fn]]
   (update-in db [:components component-name] update-fn))
@@ -50,9 +37,8 @@
 (defmethod handler :component/store
   [db [channel component-name component-value]]
   (db/set-storage-item component-name component-value)
-  (re-frame/dispatch [:component/set component-name component-value])
+  (re-frame/dispatch [:component/transition component-name (constantly component-value)])
   db)
-
 
 (defmethod handler :request/command
   [db [channel command args tap callback]]

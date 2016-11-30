@@ -15,21 +15,6 @@
 
 (def sys (atom {}))
 
-(defn stream-loop [c]
-  (let [stream (client/stream c)]
-    (go-loop []
-      (let [revent (a/<! stream)
-            body (or (get-in revent [:response :body])
-                     (:event revent))]
-        (re-frame/dispatch [(:channel revent)
-                            ;; No body is OK sometimes. Logout, for example, only
-                            ;; needs a header but the response(event) may be
-                            ;; useful, use schema/spec after this point
-                            body
-                            (get-in revent [:response :status])
-                            (:tap revent)]))
-      (recur))))
-
 (defn dev-setup []
   (when config/debug?
     (println "dev mode")
@@ -45,13 +30,13 @@
   (re-frame/dispatch-sync [:initialize-db sys])
   (dev-setup)
   (client/build-system sys {:url "http://localhost:8080/api"
+                            :stream-handler re-frame/dispatch
                             :es/onopen js/console.log
                             :es/error js/console.log
                             :es/onmessage js/console.log
                             :es/connection-type :websocket})
   (client/start sys)
-  (routes/app-routes) ;; this actually tries to make a request
-  (swap! sys assoc :stream-loop (stream-loop (:client @sys)))
+  (routes/app-routes) ;; todo: maybe not actually try to make a request
   ;; get the data connections setup,
   ;; then render
   (mount-root))
