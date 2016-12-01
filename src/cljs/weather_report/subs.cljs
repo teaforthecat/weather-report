@@ -33,3 +33,8 @@
  :components
  (fn [db args]
    (reaction (get-in @db args))))
+
+(re-frame/register-sub
+ :undos
+ (fn [db args]
+   (reaction (get-in @db [:undos]))))

@@ -34,18 +34,41 @@
   [db [channel component-name update-fn]]
   (update-in db [:components component-name] update-fn))
 
+(defmethod handler :undo/do-undo
+  [db [channel]]
+  (let [[undo & undos] (:undos db)]
+    (if undo
+      (re-frame/dispatch undo))
+    (assoc db :undos undos)))
+
 (defmethod handler :component/store
   [db [channel component-name component-value]]
   (db/set-storage-item component-name component-value)
   (re-frame/dispatch [:component/transition component-name (constantly component-value)])
   db)
 
+(defn undo-for [db command-event]
+  (let [command (:command command-event)
+        {:keys [:account/xact-id :account/evo-id]} (:args command-event)
+        ;; important!!! this will delete the account - We only have add and delete so far
+        args (if evo-id
+               {:account/xact-id xact-id :account/evo-id nil}
+               ;; if evo-id is nil we are deleting it, so find the current one for undo (to undelete it)
+               (select-keys
+                (first (filter #(= (int xact-id)
+                                   ((fnil int 0) (:account/xact-id %)))
+                               (:accounts db)))
+                [:account/xact-id :account/evo-id]))]
+    [:request/command command args {:undo true}]))
+
 (defmethod handler :request/command
   [db [channel command args tap callback]]
   (let [c (:client @(:sys db))
         more-tap (assoc tap :command command :args args)]
-    (client/command c command args more-tap))
-  db)
+    (client/command c command args more-tap)
+    (if (:undo tap)
+      db ;; no redo yet
+      (update-in db [:undos] conj (undo-for db more-tap)))))
 
 (defmethod handler :request/query
   [db [channel params tap]]

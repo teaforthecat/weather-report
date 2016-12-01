@@ -14,6 +14,9 @@
 (defn small-button [label event & {:as attrs}]
   (button label event (update attrs :class str " small borderless" )))
 
+(defn undo []
+  [:undo/do-undo])
+
 (defn transition [cmp & attrs]
   [:component/transition cmp #(apply assoc % attrs)])
 
@@ -25,6 +28,14 @@
 
 (defn cancel [cmp]
   (transition cmp :show false :form {} :errors {}))
+
+(defn undo-button []
+  (let [logged-in? (subscribe [:bones/logged-in?])
+        undos (subscribe [:undos])]
+    (fn []
+      (if (and @logged-in? (not-empty @undos))
+        [:div.actions
+         (small-button "Undo" (undo))]))))
 
 (defn remove-btn [id]
   [:div.actions
@@ -150,9 +161,10 @@
           (button "Login" (transition :login-form :show true) {})))
 
 (defn user-info []
-  (let [user-info (subscribe [:components :user-info])]
+  (let [user-info (subscribe [:components :user-info])
+        logged-in? (subscribe [:bones/logged-in?])]
     (fn []
-      (if @user-info
+      (if (and @logged-in?  @user-info)
         [:span.user-info (str "Hello " (:display-name @user-info))]
         [:span]))))
 

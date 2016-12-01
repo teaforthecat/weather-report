@@ -15,4 +15,5 @@
   {:name "re-frame"
    :accounts ()
    ;; we want this to just happen once on page load
-   :components {:user-info (get-storage-item :user-info)}})
+   :components {:user-info (get-storage-item :user-info)
+                :undos ()}})
