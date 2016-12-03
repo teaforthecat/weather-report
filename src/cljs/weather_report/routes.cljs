@@ -25,6 +25,12 @@
   (defroute "/about" []
     (re-frame/dispatch [:set-active-panel :about-panel]))
 
+  (defroute "/:panel" {:as args}
+    (let [panel (keyword (str (:panel args) "-panel"))]
+      (re-frame/dispatch [:set-active-panel panel])))
+
+
+
 
   ;; --------------------
   (hook-browser-navigation!))
