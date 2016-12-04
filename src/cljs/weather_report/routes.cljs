@@ -19,14 +19,14 @@
   ;; --------------------
   ;; define routes here
   (defroute "/" []
-    (re-frame/dispatch [:set-active-panel :home-panel])
+    (re-frame/dispatch [:set-active-panel :home])
     (re-frame/dispatch [:request/query {:accounts :all}]))
 
   (defroute "/about" []
-    (re-frame/dispatch [:set-active-panel :about-panel]))
+    (re-frame/dispatch [:set-active-panel :about]))
 
   (defroute "/:panel" {:as args}
-    (let [panel (keyword (str (:panel args) "-panel"))]
+    (let [panel (keyword (:panel args))]
       (re-frame/dispatch [:set-active-panel panel])))
 
 

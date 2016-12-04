@@ -2,14 +2,40 @@
   (:require [re-frame.core :refer [dispatch subscribe]]
             [weather-report.components :as c]))
 
+(def language :en)
+
+(def dictionary
+  {:home "Home"
+   :cities "Cities"
+   :about "About"})
+
+(defn translate [k]
+  (get dictionary k))
+
+(defprotocol Render
+  (render [thing] [thing args]))
+
+(extend-protocol Render
+  Keyword
+  (render [thing]
+    (translate thing))
+  MultiFn
+  (render [thing args]
+    (into [thing] args))
+  function
+  (render [thing args]
+    (into [thing] args)))
+
+(comment
+  (render navigation [:x :y :z])
+  (render :cites))
+
 (defn navigation []
   [:div#primary-navigation
    [:div.sr-primary-nav
-    ;; [:a#logo {:href "#/"}]
+    [:a#logo {:href "#/"}]
     [:nav {:role "navigation" :aria-label "Main Navigation"}
-     [:a {:href "#/"} ""]
      [:a {:href "#/"} "Weather Report"]
-     [:a {:href "#/"} ""]
      [:a {:href "#/cities"}
       [:i.icon-briefcase]
       [:span "Cities"]]
@@ -26,21 +52,21 @@
         active-panel (subscribe [:active-panel])]
     (fn []
       [:div#wrap
-       [navigation]
+       (render navigation)
        [:div#main
         [:div#header_container
          [:div.main-container
           [:div#header.pure-g
            [:div.pure-u-5-8.breadcrumb-title
             [:ul#breadcrumbs]
-            [:h1 (str @active-panel)]]
+            [:h1 (render @active-panel)]]
            [:div.pure-u-3-8
             [:div#admin-nav.sr-fload-right
              [:ul.navbar
-              [:li.separator [c/undo-button]]
-              [:li.separator [c/user-info]]
+              [:li.separator (render c/undo-button)]
+              [:li.separator (render c/user-info)]
               [:li.separator.last
-               [c/login]]]]]]]]
+               (render c/login)]]]]]]]
         [:div.flexer
          (into [:div.main-container]
                (rest body))]]])))
@@ -49,15 +75,25 @@
 
 (defn home-panel []
   (let [logged-in (subscribe [:bones/logged-in?])]
-    (if @logged-in
-      [:div.accounts-view
-       [c/add-account]
-       [c/accounts-list]])))
+    (fn []
+      (render
+       layout
+       [:application
+        (if @logged-in
+          [:div.accounts-view
+           (render c/add-account)
+           (render c/accounts-list)])]))))
 
 (defn cities-panel []
-  (let []
+  (let [logged-in (subscribe [:bones/logged-in?])]
     (fn []
-      [:div "cities"])))
+      (render
+       layout
+       [:application
+        (if @logged-in
+          [:div.accounts-view
+           (render c/add-account)
+           (render c/accounts-list)])]))))
 
 ;; about
 
@@ -70,17 +106,15 @@
 ;; main
 
 (defmulti panel identity)
-(defmethod panel :home-panel [] [home-panel])
-(defmethod panel :cities-panel [] [cities-panel])
-(defmethod panel :about-panel [] [about-panel])
+(defmethod panel :home [] [home-panel])
+(defmethod panel :cities [] [cities-panel])
+(defmethod panel :about [] [about-panel])
 (defmethod panel :default [] [:div])
 
-(defn show-panel
-  [panel-name]
+(defn show-panel [panel-name]
   [panel panel-name])
 
 (defn main-panel []
   (let [active-panel (subscribe [:active-panel])]
     (fn []
-      (layout :application
-              [panel @active-panel]))))
+      [show-panel @active-panel])))
