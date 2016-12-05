@@ -61,11 +61,20 @@
                 [:account/xact-id :account/evo-id]))]
     [:request/command command args {:undo true}]))
 
+(defn fake-post [url params]
+  ;; args is the form data
+  (re-frame/dispatch [:event/message (:args params)])
+  (go {:status 200
+       :body "hello"}
+      ))
+
 (defmethod handler :request/command
   [db [channel command args tap callback]]
   (let [c (:client @(:sys db))
         more-tap (assoc tap :command command :args args)]
-    (client/command c command args more-tap)
+    (if (= command :add-city)
+      (client/command (assoc-in c [:conf :req/post-fn] fake-post) command args more-tap)
+      (client/command c command args more-tap))
     (if (:undo tap)
       db ;; no redo yet
       (update-in db [:undos] conj (undo-for db more-tap)))))
@@ -183,13 +192,22 @@
 
 (defmethod handler :event/message
   [db [channel event]]
-  (let [{:keys [:account/xact-id :account/evo-id]} event]
-    (if (nil? evo-id)
-      (update db :accounts (partial remove
-                                   ;; todo fix str->int
-                                    #(= (int xact-id) (int (:account/xact-id %)))))
-      (update db :accounts conj {:account/xact-id xact-id
-                                 :account/evo-id evo-id}))))
+  (let [{:keys [:account/xact-id :account/evo-id] :as account} event
+        {:keys [:city/name :city/temp] :as city} event]
+    (cond
+      (not-empty city)
+      (if temp
+        (update db :cities conj city)
+        (update db :cities (partial remove #(= (:city/name city) (:city/name %)))))
+      (not-empty account)
+      (if (nil? evo-id)
+        (update db :accounts (partial remove
+                                      ;; todo fix str->int
+                                      #(= (int xact-id) (int (:account/xact-id %)))))
+        (update db :accounts conj {:account/xact-id xact-id
+                                   :account/evo-id evo-id}))
+      :default
+      db)))
 
 (defn register-channel [channel]
   (re-frame/register-handler channel [re-frame.middleware/debug] handler))

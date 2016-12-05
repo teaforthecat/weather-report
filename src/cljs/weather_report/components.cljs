@@ -37,24 +37,37 @@
         [:div.actions
          (small-button "Undo" (undo))]))))
 
-(defn remove-btn [id]
+(defn remove-btn [command-name args]
   [:div.actions
-   (small-button "Remove" (command :add-account ;; nil evo-id removes
-                                   {:account/xact-id (int id)
-                                    :account/evo-id nil}))])
+   (small-button "Remove" (command command-name args))])
 
-(defn account-li [{:keys [:account/xact-id :account/evo-id]}]
+(defn account-li [{:keys [:account/xact-id :account/evo-id] :as account}]
   ^{:key xact-id}
   [:tr
    [:td.center xact-id]
    [:td.center  evo-id]
    [:td.center
-    [remove-btn xact-id]]])
+    ;; nil evo-id removes
+    [remove-btn :add-account (assoc account :account/evo-id nil)]]])
+
+(defn city-li [{:keys [:city/name :city/temp] :as city}]
+  ^{:key (:city/name city)}
+  [:tr
+   [:td.center (:city/name city)]
+   [:td.center temp]
+   [:td.center
+    [remove-btn :add-city (assoc city :city/temp nil)]]])
 
 (def accounts-empty
   [:tr
    [:td.center]
    [:td.center "no accounts"]
+   [:td.center]])
+
+(def cities-empty
+  [:tr
+   [:td.center]
+   [:td.center "no cities"]
    [:td.center]])
 
 (defn accounts-list []
@@ -70,6 +83,20 @@
         (if (empty? @accounts)
           accounts-empty
           (map account-li @accounts))]])))
+
+(defn cities-list []
+  (let [cities (subscribe [:cities])]
+    (fn []
+      [:table.cities-list.data-table
+       [:thead
+        [:tr
+         [:th "City Name"]
+         [:th "Temp"]
+         [:th "controls"]]]
+       [:tbody
+        (if (empty? @cities)
+          cities-empty
+          (map city-li @cities))]])))
 
 (defn toggle [subs true-form false-form]
   (let [t (subscribe subs)]
@@ -131,10 +158,41 @@
              (button "Submit" (submit :add-account f errors) {})
              ]))))
 
+(defn add-city-form []
+  (let [f (subscribe [:components :add-city :form])
+        errors (subscribe [:components :add-city :errors])]
+    (fn []
+      (form f
+            [:div
+             [:h3 "Add City"]
+             [:p (:message @errors)]]
+            [
+             (field :city/name
+                    "Name"
+                    ;; :field :numeric
+                    ;; :type :number
+                    )
+             (field :city/temp
+                    "Temp"
+                    ;; :field :numeric
+                    ;; :type :number
+                    )
+             ]
+            [:div.buttons
+             (button "Cancel" (cancel :add-city) {})
+             ;; the command and component happen to have the same name
+             (button "Submit" (submit :add-city f errors) {})
+             ]))))
+
 (defn add-account []
   (toggle [:components :add-account :show]
           [add-account-form]
           (button "Add Account" (transition :add-account :show true) {})))
+
+(defn add-city []
+  (toggle [:components :add-city :show]
+          [add-city-form]
+          (button "Add City" (transition :add-city :show true) {})))
 
 (defn login-form []
   (toggle [:components :login-form :show]

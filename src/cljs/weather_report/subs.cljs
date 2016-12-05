@@ -25,6 +25,11 @@
    (reaction (seq (:accounts @db)))))
 
 (re-frame/register-sub
+ :cities
+ (fn [db _]
+   (reaction (seq (:cities @db)))))
+
+(re-frame/register-sub
  :component/toggle
  (fn [db [_ component-name]]
    (reaction (get-in @db [:components component-name :show]))))

@@ -91,9 +91,9 @@
        layout
        [:application
         (if @logged-in
-          [:div.accounts-view
-           (render c/add-account)
-           (render c/accounts-list)])]))))
+          [:div.cities-view
+           (render c/add-city)
+           (render c/cities-list)])]))))
 
 ;; about
 
