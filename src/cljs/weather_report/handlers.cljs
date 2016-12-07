@@ -129,15 +129,11 @@
                           (re-frame/dispatch [:component/store :user-info share])
                           true)
                     401 (do
-                          (swap! (:errors tap) assoc :message "Username or Password are incorrect")
+                          (re-frame/dispatch [:component/assoc :login-form :errors :message "Username or Password are incorrect"])
                           false)
                     500 (do
-                         (re-frame/dispatch [:component/transition
-                                             :login-form
-                                             #(assoc % :errors
-                                                     {:message "There was a problem communicating with the server"})])
+                          (re-frame/dispatch [:component/assoc :login-form :errors :message "There was a problem communicating with the server"])
                           false)
-
                     (do
                       (js/console.log "error!")
                       false))]
@@ -155,34 +151,35 @@
 
 (defmethod handler :response/command
   [db [channel response status tap]]
-  (cond
-    (= 200 status)
-    (do
-      (let [cmp (:component tap)]
-        ;; the command happens to match the component
-        (re-frame/dispatch [:component/transition
-                            cmp
-                            #(assoc %
-                                    :show false
-                                    :inputs {}
-                                    :form {}
-                                    :errors {})]))
-      )
-    (= 400 status)
-    (let [invalid-args (:args response)]
-      (cond
-        (= 'missing-required-key (get-in invalid-args [:account/xact-id]))
-        (swap! (:errors tap) assoc :message "Xact-id is required")
+  (let [cmp (:component tap)]
+    (cond
+      (= 200 status)
+      (do
+        (let []
+          ;; the command happens to match the component
+          (re-frame/dispatch [:component/transition
+                              cmp
+                              #(assoc %
+                                      :show false
+                                      :inputs {}
+                                      :form {}
+                                      :errors {})]))
+        )
+      (= 400 status)
+      (let [invalid-args (:args response)]
+        (cond
+          (= 'missing-required-key (get-in invalid-args [:account/xact-id]))
+          (re-frame/dispatch [:component/assoc cmp :errors :message "Xact-id is required"])
 
-        (= 'missing-required-key (get-in invalid-args [:account/evo-id]))
-        (swap! (:errors tap) assoc :message "Evo-id is required")
+          (= 'missing-required-key (get-in invalid-args [:account/evo-id]))
+          (re-frame/dispatch [:component/assoc cmp :errors :message "Evo-id is required"])
 
-        (= '(not (integer? nil)) (get-in invalid-args [:account/xact-id]))
-        (swap! (:errors tap) assoc :message "xact-id must be an integer")
+          (= '(not (integer? nil)) (get-in invalid-args [:account/xact-id]))
+          (re-frame/dispatch [:component/assoc cmp :errors :message "Xact-id must be an integer"])
 
-        (= '(not (integer? nil)) (get-in invalid-args [:account/evo-id]))
-        (swap! (:errors tap) assoc :message "Evo-id must be an integer")
-        )))
+          (= '(not (integer? nil)) (get-in invalid-args [:account/evo-id]))
+          (re-frame/dispatch [:component/assoc cmp :errors :message "Evo-id must be an integer"])
+          ))))
   db)
 
 (defmethod handler :response/query

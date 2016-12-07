@@ -15,10 +15,14 @@
 
 (s/def ::name string?)
 (s/def ::temp integer?)
+(s/def ::username integer?)
+(s/def ::password integer?)
 (s/def ::xact-id integer?)
 (s/def ::evo-id (s/nilable integer?))
 (s/def ::account (s/keys :req [::evo-id
                                ::xact-id]))
+(s/def ::login (s/keys :req [::username
+                             ::password]))
 
 (def default-db
   {:name "re-frame"

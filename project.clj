@@ -3,7 +3,7 @@
                  [org.clojure/clojurescript "1.9.229"]
                  [reagent "0.5.1"]
                  [binaryage/devtools "0.6.1"]
-                 [re-frame "0.7.0"]
+                 [re-frame "0.8.0"]
                  [secretary "1.2.3"]
                  [com.stuartsierra/component "0.3.1"]
                  ;; bones deps
