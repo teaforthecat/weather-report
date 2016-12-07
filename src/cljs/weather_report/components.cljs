@@ -1,6 +1,7 @@
 (ns weather-report.components
   (:require  [weather-report.subs]
              [weather-report.handlers]
+             [weather-report.db :as db]
              [reagent.core :as reagent]
              [clojure.string :refer [join]]
              [reagent-forms.core :refer [bind-fields bind init-field]]
@@ -14,6 +15,10 @@
 (defn small-button [label event & {:as attrs}]
   (button label event (update attrs :class str " small borderless" )))
 
+(defn dispatch-input [form attr]
+  (fn [e]
+    (dispatch [:component/assoc form :inputs attr (-> e .-target .-value)])))
+
 (defn undo []
   [:undo/do-undo])
 
@@ -23,11 +28,11 @@
 (defn command [cmd args & {:as tap}]
   [:request/command cmd args tap])
 
-(defn submit [cmd form errors]
-  (command cmd @form :errors errors :form form))
+(defn submit [cmp command]
+  [:form/submit cmp command])
 
 (defn cancel [cmp]
-  (transition cmp :show false :form {} :errors {}))
+  (transition cmp :show false :inputs {} :errors {}))
 
 (defn undo-button []
   (let [logged-in? (subscribe [:bones/logged-in?])
@@ -155,34 +160,49 @@
             [:div.buttons
              (button "Cancel" (cancel :add-account) {})
              ;; the command and component happen to have the same name
-             (button "Submit" (submit :add-account f errors) {})
+             ;; (button "Submit" (submit :add-account f errors) {})
              ]))))
 
+(defn input [f form-id attr & {:as opts :or {:type "text" :label "hi"}}]
+  [:li.form-group.has-feedback {:field :container}
+
+   ;; the label can change
+   [:label.control-label {:for form-id
+                          :id [:errors form-id :label]
+                          :field :label} (:label opts)]
+   ;; the input finally
+   [:input.short.form-control {:id form-id
+                               :aria-describedby [:errors form-id :aria]
+                               :value (attr @f)
+                               :on-change (dispatch-input form-id attr)
+                               :type (or (:type opts) :text)
+                               :field (or (:field opts) :text)}]
+   ;; use container to change class
+   [:span.glyphicon.form-control-feedback {:field :container
+                                           :aria-hidden true}]
+   ;; use label to change content
+   [:span.sr-only {:id [:errors form-id :aria]
+                   :field :label}]
+   ])
+
 (defn add-city-form []
-  (let [f (subscribe [:components :add-city :form])
-        errors (subscribe [:components :add-city :errors])]
+  (let [f (subscribe [:components :city-form :inputs])
+        old-form (reagent/atom {})
+        errors (subscribe [:components :city-form :errors])]
     (fn []
-      (form f
-            [:div
-             [:h3 "Add City"]
-             [:p (:message @errors)]]
-            [
-             (field :city/name
-                    "Name"
-                    ;; :field :numeric
-                    ;; :type :number
-                    )
-             (field :city/temp
-                    "Temp"
-                    ;; :field :numeric
-                    ;; :type :number
-                    )
-             ]
-            [:div.buttons
-             (button "Cancel" (cancel :add-city) {})
-             ;; the command and component happen to have the same name
-             (button "Submit" (submit :add-city f errors) {})
-             ]))))
+
+      [:div
+       [:h3 "Add City"]
+       [:p (:message @errors)]
+       [:ol.form
+        [:div.fields
+         (input f :city-form :db/name :label "Name")
+         (input f :city-form :db/temp :label "Temp")]
+        [:div.buttons
+         (button "Cancel" (cancel :city-form) {})
+         ;; the command and component happen to have the same name
+         (button "Submit" (submit :city-form :add-city) {})
+         ]]])))
 
 (defn add-account []
   (toggle [:components :add-account :show]
@@ -190,9 +210,9 @@
           (button "Add Account" (transition :add-account :show true) {})))
 
 (defn add-city []
-  (toggle [:components :add-city :show]
+  (toggle [:components :city-form :show]
           [add-city-form]
-          (button "Add City" (transition :add-city :show true) {})))
+          (button "Add City" (transition :city-form :show true) {})))
 
 (defn login-form []
   (toggle [:components :login-form :show]
@@ -214,7 +234,7 @@
                          ]
                         [:div.buttons
                          (button "Cancel" (cancel :login-form) {})
-                         (button "Submit" [:request/login @f {:errors errors}] {})
+                         ;; (button "Submit" [:request/login @f {:errors errors}] {})
                          ])]]])])
           (button "Login" (transition :login-form :show true) {})))
 

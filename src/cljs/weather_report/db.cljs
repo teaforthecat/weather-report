@@ -1,6 +1,7 @@
 (ns weather-report.db
   (:require [weather-report.local-storage :as storage]
-            [cljs.spec :as s]))
+            [cljs.spec :as s]
+            [reagent.core :as reagent]))
 
 
 (defn get-storage-item [^Keyword component]
@@ -12,6 +13,8 @@
     (storage/remove-item! component)
     (storage/set-item! component (pr-str value))))
 
+(s/def ::name string?)
+(s/def ::temp integer?)
 (s/def ::xact-id integer?)
 (s/def ::evo-id (s/nilable integer?))
 (s/def ::account (s/keys :req [::evo-id
@@ -23,12 +26,18 @@
    :cities ()
    ;; we want this to just happen once on page load
    :components {:user-info (get-storage-item :user-info)
-                :forms {::account {}}
+                ;; :city-form {}
+                :account-form {:spec ::account
+                               :inputs {}
+                               :errors {}}
                 :undos ()}})
 
 (comment
-  (get-in
-   @re-frame.db/app-db
-   [:components :add-account])
+
+  (:components  @re-frame.db/app-db)
+
+  (re-frame.core/dispatch [:event/client-status {:bones/logged-in? false}])
+
+  (re-frame.core/dispatch [:event/client-status {:bones/logged-in? true}])
 
   )

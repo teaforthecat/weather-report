@@ -90,7 +90,7 @@
       (render
        layout
        [:application
-        (if @logged-in
+        (if true ;@logged-in
           [:div.cities-view
            (render c/add-city)
            (render c/cities-list)])]))))

@@ -34,6 +34,18 @@
   [db [channel component-name update-fn]]
   (update-in db [:components component-name] update-fn))
 
+(defmethod handler :component/assoc
+  [db [channel & args]]
+  (assoc-in db (into [:components] (butlast args)) (last args)))
+
+(re-frame/register-handler
+ :form/submit
+ (fn [db [channel form command]]
+   (let [{:keys [inputs spec]} (get-in db [:components form])]
+     (if inputs ;; TODO: && valid
+       (re-frame/dispatch [:request/command command inputs {:component form}]))
+     db)))
+
 (defmethod handler :undo/do-undo
   [db [channel]]
   (let [[undo & undos] (:undos db)]
@@ -146,12 +158,13 @@
   (cond
     (= 200 status)
     (do
-      (let [cmp (:command tap)]
+      (let [cmp (:component tap)]
         ;; the command happens to match the component
         (re-frame/dispatch [:component/transition
                             cmp
                             #(assoc %
                                     :show false
+                                    :inputs {}
                                     :form {}
                                     :errors {})]))
       )
