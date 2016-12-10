@@ -1,14 +1,13 @@
 {:ldap
  {:con
-  {:host [{:address "stpdc6.stp01.office.gdi"}
-          {:address "stpdc5.stp01.office.gdi"}]
-   :bind-dn "CN=LDAP Bind,OU=Service Accounts,OU=User Accounts,OU=STP01,DC=stp01,DC=office,DC=gdi"
+  {:host [{:address "example.com"}]
+   :bind-dn "CN=user-name,OU=user-group,OU=user-group,OU=part,DC=of,DC=domain,DC=name"
    :password "-redacted-"
    :timeout         5000
    :connect-timeout 5000
    :ssl?            true}
-  :auth {:user-domain "stp01.office.gdi"
-         :search-base "OU=STP01,DC=stp01,DC=office,DC=gdi"
+  :auth {:user-domain "example.com"
+         :search-base "OU=part,DC=of,DC=domain,DC=name"
          :search-attribute "sAMAccountName"
-         :attributes [:mail :displayName :msSFU30PosixMemberOf]
+         :attributes [:mail :displayName]
          }}}
