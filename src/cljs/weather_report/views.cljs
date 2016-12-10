@@ -6,7 +6,6 @@
 
 (def dictionary
   {:home "Home"
-   :cities "Cities"
    :about "About"})
 
 (defn translate [k]
@@ -26,19 +25,12 @@
   (render [thing args]
     (into [thing] args)))
 
-(comment
-  (render navigation [:x :y :z])
-  (render :cites))
-
 (defn navigation []
   [:div#primary-navigation
    [:div.sr-primary-nav
     [:a#logo {:href "#/"}]
     [:nav {:role "navigation" :aria-label "Main Navigation"}
      [:a {:href "#/"} "Weather Report"]
-     [:a {:href "#/cities"}
-      [:i.icon-briefcase]
-      [:span "Cities"]]
      [:a {:href "#/about"}
       [:i.icon-briefcase]
       [:span "About"]]]]])
@@ -84,30 +76,21 @@
            (render c/add-account)
            (render c/accounts-list)])]))))
 
-(defn cities-panel []
-  (let [logged-in (subscribe [:bones/logged-in?])]
-    (fn []
-      (render
-       layout
-       [:application
-        (if @logged-in
-          [:div.accounts-view
-           (render c/add-account)
-           (render c/accounts-list)])]))))
-
-;; about
+; about
 
 (defn about-panel []
   (fn []
-    [:div "This is the About Page."
-     [:div [:a {:href "#/"} "go to Home Page"]]]))
+    (render
+     layout
+     [:application
+      [:div "This is the About Page."
+       [:div [:a {:href "#/"} "go to Home Page"]]]])))
 
 
 ;; main
 
 (defmulti panel identity)
 (defmethod panel :home [] [home-panel])
-(defmethod panel :cities [] [cities-panel])
 (defmethod panel :about [] [about-panel])
 (defmethod panel :default [] [:div])
 
