@@ -1,5 +1,7 @@
 (ns weather-report.db
-  (:require [weather-report.local-storage :as storage]))
+  (:require [weather-report.local-storage :as storage]
+            [weather-report.accounts :as accounts]
+            [cljs.spec :as s]))
 
 
 (defn get-storage-item [^Keyword component]
@@ -14,6 +16,13 @@
 (def default-db
   {:name "re-frame"
    :accounts ()
+   :editable {:accounts {:_meta {:spec ::accounts/fusion}}}
    ;; we want this to just happen once on page load
    :components {:user-info (get-storage-item :user-info)
                 :undos ()}})
+
+(comment
+  @re-frame.db/app-db
+
+  (s/conform :accounts/fusion {:xact-id "123" :evo-id "321"})
+  )

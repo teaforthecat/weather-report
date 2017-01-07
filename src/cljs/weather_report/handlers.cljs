@@ -3,8 +3,11 @@
   (:require-macros [reagent.ratom :refer [reaction]]
                    [cljs.core.async.macros :refer [go go-loop]])
   (:require [re-frame.core :as re-frame]
-            [re-frame.utils :refer [log error]]
+            ;; [re-frame.utils :refer [log error]]
             [weather-report.db :as db]
+            [bones.editable :as e]
+            [bones.editable.response :as response]
+            [bones.editable.helpers :as h]
             [bones.client :as client]
             [cljs.core.async :as a]
             [schema.core :as s]))
@@ -12,8 +15,8 @@
 (def debug?
   ^boolean js/goog.DEBUG)
 
-(def mids  [(if debug? re-frame.middleware/debug)
-            re-frame.middleware/trim-v])
+(def mids  [(if debug? re-frame/debug)
+            re-frame/trim-v])
 
 
 ;; the first of the second param is what we dispatch on
@@ -23,12 +26,7 @@
 
 (defmethod handler :initialize-db
   [_ [channel sys]]
-  (merge db/default-db
-         {:sys sys}))
-
-(defmethod handler :set-active-panel
-  [db [channel active-panel]]
-  (assoc db :active-panel active-panel))
+  db/default-db)
 
 (defmethod handler :component/transition
   [db [channel component-name update-fn]]
@@ -61,34 +59,13 @@
                 [:account/xact-id :account/evo-id]))]
     [:request/command command args {:undo true}]))
 
-(defmethod handler :request/command
-  [db [channel command args tap callback]]
-  (let [c (:client @(:sys db))
-        more-tap (assoc tap :command command :args args)]
-    (client/command c command args more-tap)
-    (if (:undo tap)
-      db ;; no redo yet
-      (update-in db [:undos] conj (undo-for db more-tap)))))
+(defmethod handler [:response/login 200]
+  [{:keys [db client]} [channel response status tap]]
+  (let [{:keys [form-type identifier]} tap]
+    (client/start client) ;; this should trigger :event/client-status
+    {:dispatch (h/editable-reset form-type identifier {})}))
 
-(defmethod handler :request/query
-  [db [channel params tap]]
-  (let [c (:client @(:sys db))]
-    (client/query c params tap))
-  db)
-
-(defmethod handler :request/login
-  [db [channel fields tap]]
-  (let [c (:client @(:sys db))]
-    (client/login c fields tap))
-  db)
-
-(defmethod handler :request/logout
-  [db [channel tap]]
-  (let [c (:client @(:sys db))]
-    (client/logout c tap))
-  db)
-
-(defmethod handler :response/login
+#_(defmethod handler :response/login
   [db [channel response status tap]]
   (if-let [sys (:sys db)]
     (let [success (condp = status
@@ -123,7 +100,7 @@
       (assoc db :bones/logged-in? success))
     db))
 
-(defmethod handler :response/logout
+#_(defmethod handler :response/logout
   [db [channel response status tap]]
   (if (= 200 status)
     (do
@@ -132,7 +109,7 @@
       (assoc db :bones/logged-in? false))
     db))
 
-(defmethod handler :response/command
+#_(defmethod handler :response/command
   [db [channel response status tap]]
   (cond
     (= 200 status)
@@ -163,25 +140,29 @@
         )))
   db)
 
-(defmethod handler :response/query
-  [db [channel response status tap]]
-  (if (= 200 status)
-    (let [results (or (:results response) [])
-          accounts (mapv #(-> %
-                              (assoc :account/xact-id (int (:key %)))
-                              (assoc :account/evo-id (get-in % [:value "evo-id"])))
-                        results)]
-      (assoc db :accounts accounts))
-    ;; todo error reporting
-    db))
+(defn result-to-editable-account [item]
+  ;; TODO: conform to spec here instead
+  (let [xact-id (js/parseInt (:key item))
+        _evo-id (get-in item [:value "evo-id"])
+        evo-id (if _evo-id (js/parseInt _evo-id))]
+    {xact-id {:inputs {:xact-id xact-id :evo-id evo-id}}}))
 
-(defmethod handler :event/client-status
-  [db [channel event]]
-  (if-let [logged-in? (:bones/logged-in? event)]
-    (assoc db :bones/logged-in? true)
-    db))
+(defmethod response/handler [:response/query 200]
+  [{:keys [db]} [channel response status tap]]
+  (let [results (or (:results response) [])
+        accounts (into {} (map result-to-editable-account) results)]
+    ;; need to keep the :_meta
+    {:db (update-in db [:editable :accounts] merge accounts)}))
 
-(defmethod handler :event/message
+(defmethod response/handler :event/client-status
+  [{:keys [db]} [channel event]]
+  (let [logged-in? (:bones/logged-in? event)]
+    (if logged-in?
+      {:dispatch [:request/query {:accounts :all}]
+       :db (assoc db :bones/logged-in? true)}
+      {:db (assoc db :bones/logged-in? false)})))
+
+#_(defmethod handler :event/message
   [db [channel event]]
   (let [{:keys [:account/xact-id :account/evo-id]} event]
     (if (nil? evo-id)
@@ -192,23 +173,8 @@
                                  :account/evo-id (int evo-id)}))))
 
 (defn register-channel [channel]
-  (re-frame/register-handler channel [re-frame.middleware/debug] handler))
+  (re-frame/reg-event-db channel [re-frame/debug] handler))
 
 ;; non-lazy initializer
 (doseq [h (keys (methods handler))]
   (register-channel h))
-
-;; maybe??
-;; to register a handler in another namespace use this
-(defmacro register
-  "register an event handler.
-   be sure to return the db in the function body.
-   be sure to match the signature for db and channel here:
-   usage: (register :some/event [db [channel event args...]]
-            (function body)
-            db)
-  "
-  [channel args & body]
-  `(do
-     (register-channel ~channel)
-     (defmethod handler ~channel ~args ~@body)))

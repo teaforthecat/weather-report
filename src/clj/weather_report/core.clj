@@ -27,19 +27,20 @@
 (def login-schema {:username s/Str :password s/Str})
 
 (defn add-account [args auth-info req]
-  (let [{:keys [:account/xact-id :account/evo-id]} args
+  (let [{:keys [xact-id evo-id]} args
         producer (:producer @sys)]
-    @(kafka/produce producer
-                   "accounts"
-                   ;; serialized to integer
-                   (str xact-id)
-                   ;; nil for compaction
-                   (if evo-id {:evo-id evo-id} nil))))
+    (merge {:args args}
+           @(kafka/produce producer
+                           "accounts"
+                           ;; serialized to integer
+                           (str xact-id)
+                           ;; nil for compaction
+                           (if evo-id {:evo-id evo-id} nil)))))
 
 (comment
-  (add-account {:account/evo-id 123 :account/xact-id 456} {} {})
-  (add-account {:account/evo-id 987 :account/xact-id 789} {} {})
-  (add-account {:account/evo-id nil :account/xact-id 456} {} {})
+  (add-account {:evo-id 123 :xact-id 456} {} {})
+  (add-account {:evo-id 987 :xact-id 789} {} {})
+  (add-account {:evo-id nil :xact-id 456} {} {})
   )
 
 (defn format-event [request message]
@@ -64,8 +65,16 @@
   )
 
 (def commands
-  [[:add-account {:account/xact-id s/Int
-                  :account/evo-id (s/maybe s/Int)}
+  [[:accounts/upsert {:xact-id s/Int
+                      :evo-id s/Int}
+    add-account]
+   ;; update is required by bones.editable.forms save method
+   [:accounts/update {:xact-id s/Int
+                      :evo-id s/Int}
+    add-account]
+   [:accounts/delete {:xact-id s/Int
+                      ;; nil or nothing
+                      (s/optional-key :evo-id) (s/constrained (s/maybe s/Any) nil?)}
     add-account]])
 
 (defn query-handler [args auth-info req]
