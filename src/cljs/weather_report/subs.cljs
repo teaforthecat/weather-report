@@ -4,37 +4,37 @@
             [weather-report.local-storage :as storage]))
 
 
-(re-frame/register-sub
+(re-frame/reg-sub
  :name
  (fn [db]
-   (reaction (:name @db))))
+   (:name @db)))
 
-(re-frame/register-sub
- :active-panel
- (fn [db _]
-   (reaction (:active-panel @db))))
+;; (re-frame/register-sub
+;;  :active-panel
+;;  (fn [db _]
+;;    (reaction (:active-panel @db))))
 
-(re-frame/register-sub
- :bones/logged-in?
- (fn [db _]
-   (reaction (:bones/logged-in? @db))))
+;; (re-frame/register-sub
+;;  :bones/logged-in?
+;;  (fn [db _]
+;;    (reaction (:bones/logged-in? @db))))
 
-(re-frame/register-sub
+(re-frame/reg-sub
  :accounts
  (fn [db _]
-   (reaction (seq (:accounts @db)))))
+   (seq (:accounts @db))))
 
-(re-frame/register-sub
+(re-frame/reg-sub
  :component/toggle
  (fn [db [_ component-name]]
-   (reaction (get-in @db [:components component-name :show]))))
+   (get-in db [:components component-name :show])))
 
-(re-frame/register-sub
+(re-frame/reg-sub
  :components
  (fn [db args]
-   (reaction (get-in @db args))))
+   (get-in db args)))
 
-(re-frame/register-sub
+(re-frame/reg-sub
  :undos
  (fn [db args]
-   (reaction (get-in @db [:undos]))))
+   (get-in db [:undos])))

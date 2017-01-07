@@ -1,10 +1,7 @@
 (defproject weather-report "0.2.0"
   :dependencies [[org.clojure/clojure "1.8.0"]
                  [org.clojure/clojurescript "1.9.229"]
-                 [reagent "0.5.1"]
-                 [binaryage/devtools "0.6.1"]
-                 [re-frame "0.7.0"]
-                 [secretary "1.2.3"]
+
                  [com.stuartsierra/component "0.3.1"]
                  ;; bones deps
                  [bones/conf "0.2.2"]
@@ -13,11 +10,21 @@
                  [com.taoensso/carmine "2.12.2"]
                  [org.onyxplatform/onyx-kafka "0.8.8.0"]
                  [manifold "0.1.4"]
-                 ;; bones cljs
-                 [reagent-forms "0.5.24"]
-                 [bones/client "0.2.3"]
+
                  ;; domain specific
                  [org.clojars.pntblnk/clj-ldap "0.0.12"]
+
+                 ;; bones cljs
+                 ;; [reagent "0.6.0"]
+                 ;; maybe?
+                 [reagent "0.6.0" :exclusions [cljsjs/react]]
+                 ;; [cljsjs/react-with-addons "15.2.1-0"]
+                 [reagent-forms "0.5.28"]
+                 [re-frame "0.9.0"]
+                 [secretary "1.2.3"]
+                 [bones/client "0.2.3"]
+                 ;; [bones/editable "0.1.0"]
+
                  ]
 
   :plugins [[lein-cljsbuild "1.1.3"]]
@@ -43,7 +50,8 @@
   {:dev
    {:dependencies [
                    [figwheel-sidecar "0.5.4-3"]
-                   [com.cemerick/piggieback "0.2.1"]]
+                   [com.cemerick/piggieback "0.2.1"]
+                   [binaryage/devtools "0.8.3"]]
     :plugins      [[lein-figwheel "0.5.4-3"]
                    [lein-doo "0.1.7"]
                    ]
