@@ -168,8 +168,8 @@
   (if (= 200 status)
     (let [results (or (:results response) [])
           accounts (mapv #(-> %
-                             (assoc :account/xact-id (:key %))
-                             (assoc :account/evo-id (get-in % [:value "evo-id"])))
+                              (assoc :account/xact-id (int (:key %)))
+                              (assoc :account/evo-id (get-in % [:value "evo-id"])))
                         results)]
       (assoc db :accounts accounts))
     ;; todo error reporting
@@ -188,8 +188,8 @@
       (update db :accounts (partial remove
                                    ;; todo fix str->int
                                     #(= (int xact-id) (int (:account/xact-id %)))))
-      (update db :accounts conj {:account/xact-id xact-id
-                                 :account/evo-id evo-id}))))
+      (update db :accounts conj {:account/xact-id (int xact-id)
+                                 :account/evo-id (int evo-id)}))))
 
 (defn register-channel [channel]
   (re-frame/register-handler channel [re-frame.middleware/debug] handler))

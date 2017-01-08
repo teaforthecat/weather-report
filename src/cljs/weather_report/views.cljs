@@ -71,10 +71,11 @@
       (render
        layout
        [:application
-        (if @logged-in
-          [:div.accounts-view
-           (render c/add-account)
-           (render c/accounts-list)])]))))
+        [c/toggle [:bones/logged-in?]
+         [:div.accounts-view
+          (render c/add-account)
+          (render c/accounts-list)]
+         [:div.accounts-view "-"]]]))))
 
 ; about
 
