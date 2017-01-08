@@ -1,6 +1,7 @@
 (ns weather-report.views
   (:require [re-frame.core :refer [dispatch subscribe]]
-            [weather-report.components :as c]))
+            [weather-report.components :as c]
+            [bones.editable :as e]))
 
 ;; todo: make dynamic
 (def language :en)
@@ -56,10 +57,22 @@
             (accounts-view))))
 
 
+(defmethod e/handler :event/message
+  [{:keys [db]} [channel message]]
+  (println channel)
+  (println message)
+  ;; you probably mostly want to write to the database here
+  ;; and have subscribers reacting to changes
+  ;;  {:db (other-multi-method db message) }
+  (let [id (:xact-id message)]
+    {:db (update-in db [:editable :accounts id :inputs] merge message)}))
+
+
 (comment
 
   ((main-panel))
 
   (accounts-view)
+
 
   )

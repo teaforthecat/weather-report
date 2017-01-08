@@ -44,41 +44,21 @@
                                    {:account/xact-id (int id)
                                     :account/evo-id nil}))])
 
-(defn account-li [{:keys [:account/xact-id :account/evo-id]}]
-  ^{:key xact-id}
-  [:tr
-   [:td.center xact-id]
-   [:td.center  evo-id]
-   [:td.center
-    [remove-btn xact-id]]])
-
-(defn account-row  [{:keys [xact-id evo-id]}]
-  ^{:key xact-id}
-  [:tr
-   [:td.center xact-id]
-   [:td.center  evo-id]
-   [:td.center
-    [remove-btn xact-id]]])
+(defn account-row [[id fusion]]
+  (let [{:keys [inputs]} (e/form :accounts id)]
+    [(fn []
+       ^{:key (inputs :xact-id)}
+       [:tr
+        [:td.center (inputs :xact-id)]
+        [:td.center  (inputs :evo-id)]
+        [:td.center
+         [remove-btn (inputs :xact-id)]]])]))
 
 (def accounts-empty
   [:tr
    [:td.center]
    [:td.center "no accounts"]
    [:td.center]])
-
-(defn accounts-list []
-  (let [accounts (subscribe [:accounts])]
-    (fn []
-      [:table.accounts-list.data-table
-       [:thead
-        [:tr
-         [:th "Xact ID"]
-         [:th "Evo ID"]
-         [:th "controls"]]]
-       [:tbody
-        (if (empty? @accounts)
-          accounts-empty
-          (map account-li @accounts))]])))
 
 (defn accounts-table []
   (let [accounts (subscribe [:editable :accounts])]
@@ -89,10 +69,11 @@
          [:th "Xact ID"]
          [:th "Evo ID"]
          [:th "controls"]]]
-       [:tbody
-        (if (empty? @accounts)
-          accounts-empty
-          (map account-row @accounts))]])))
+       (if (empty? @accounts)
+         [:tbody
+          accounts-empty]
+         (into [:tbody]
+               (map account-row @accounts)))])))
 
 (defn toggle
   "usage:

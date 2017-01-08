@@ -32,7 +32,7 @@
   :min-lein-version "2.5.3"
 
   :resource-paths ["resources"]
-  :source-paths ["src/clj" "src/cljs"] ;; src/cljs for macros.clj
+  :source-paths ["src/clj" "src/cljs" "src/cljc"]
   :test-paths   ["test/clj"]
 
   :clean-targets ^{:protect false} ["resources/public/js/compiled" "target"
@@ -62,7 +62,7 @@
   :cljsbuild
   {:builds
    [{:id           "dev"
-     :source-paths ["src/cljs"]
+     :source-paths ["src/cljs" "src/cljc"]
      :figwheel     {:on-jsload "weather-report.core/mount-root"}
      :compiler     {:main                 weather-report.core
                     :output-to            "resources/public/js/compiled/app.js"
@@ -71,14 +71,14 @@
                     :source-map-timestamp true}}
 
     {:id           "min"
-     :source-paths ["src/cljs"]
+     :source-paths ["src/cljs" "src/cljc"]
      :compiler     {:main            weather-report.core
                     :output-to       "resources/public/js/compiled/app.js"
                     :optimizations   :advanced
                     :closure-defines {goog.DEBUG false}
                     :pretty-print    false}}
     {:id           "test"
-     :source-paths ["src/cljs" "test/cljs"]
+     :source-paths ["src/cljs" "src/cljc" "test/cljs"]
      :compiler     {:output-to     "resources/public/js/compiled/test.js"
                     :main          weather-report.runner
                     :optimizations :none}}

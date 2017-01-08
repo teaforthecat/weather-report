@@ -27,14 +27,15 @@
 (def login-schema {:username s/Str :password s/Str})
 
 (defn add-account [args auth-info req]
-  (let [{:keys [:account/xact-id :account/evo-id]} args
+  (let [{:keys [xact-id evo-id]} args
         producer (:producer @sys)]
-    @(kafka/produce producer
-                   "accounts"
-                   ;; serialized to integer
-                   (str xact-id)
-                   ;; nil for compaction
-                   (if evo-id {:evo-id evo-id} nil))))
+    (merge {:args args}
+           @(kafka/produce producer
+                           "accounts"
+                           ;; serialized to integer
+                           (str xact-id)
+                           ;; nil for compaction
+                           (if evo-id {:evo-id evo-id} nil)))))
 
 (comment
   (add-account {:account/evo-id 123 :account/xact-id 456} {} {})
@@ -43,6 +44,7 @@
   )
 
 (defn format-event [request message]
+  (println (str "format-event: " message))
   {;; event-types not supported
    :data message})
 
@@ -64,8 +66,8 @@
   )
 
 (def commands
-  [[:add-account {:account/xact-id s/Int
-                  :account/evo-id (s/maybe s/Int)}
+  [[:accounts/upsert {:xact-id s/Int
+                      :evo-id (s/maybe s/Int)}
     add-account]])
 
 (defn query-handler [args auth-info req]
