@@ -22,7 +22,7 @@
 (re-frame/reg-sub
  :accounts
  (fn [db _]
-   (seq (:accounts @db))))
+   (seq (:accounts db))))
 
 (re-frame/reg-sub
  :component/toggle

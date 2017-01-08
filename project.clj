@@ -18,7 +18,7 @@
                  ;; [reagent "0.6.0"]
                  ;; maybe?
                  [reagent "0.6.0" :exclusions [cljsjs/react]]
-                 ;; [cljsjs/react-with-addons "15.2.1-0"]
+                 [cljsjs/react-with-addons "15.2.1-0"]
                  [reagent-forms "0.5.28"]
                  [re-frame "0.9.0"]
                  [secretary "1.2.3"]
