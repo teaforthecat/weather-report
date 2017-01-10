@@ -40,9 +40,11 @@
 
 (defn remove-btn [id]
   [:div.actions
-   (small-button "Remove" (command :add-account ;; nil evo-id removes
-                                   {:account/xact-id (int id)
-                                    :account/evo-id nil}))])
+   ;; to delete evo-id is to invoke log compaction is to delete the fusion
+   (small-button "Remove" (command :accounts/delete
+                                   {:xact-id id :evo-id nil}
+                                   :identifier id
+                                   :solo true))])
 
 (defn account-row [[id fusion]]
   (let [{:keys [inputs]} (e/form :accounts id)]

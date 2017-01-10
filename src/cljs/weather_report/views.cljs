@@ -59,16 +59,24 @@
 
 (defmethod e/handler :event/message
   [{:keys [db]} [channel message]]
-  (println channel)
-  (println message)
-  ;; you probably mostly want to write to the database here
-  ;; and have subscribers reacting to changes
-  ;;  {:db (other-multi-method db message) }
-  (let [id (:xact-id message)]
-    {:db (update-in db [:editable :accounts id :inputs] merge message)}))
+  (let [id (:xact-id message)
+        evo-id (:evo-id message)]
+    (if evo-id
+      {:db (update-in db [:editable :accounts id :inputs] merge message)}
+      ;; deletion
+      {:db (update-in db [:editable :accounts] dissoc id)})))
+
+(defmethod e/handler [:response/command 200]
+  [{:keys [db]} [channel response status tap]]
+  (let [{:keys [form-type identifier]} tap]
+    (if (= identifier :new)
+      {:dispatch (e/editable-response form-type identifier response)}
+      {:log {:message "response recieved, waiting for events..."}})))
+
 
 
 (comment
+  @re-frame.db/app-db
 
   ((main-panel))
 

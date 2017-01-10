@@ -38,9 +38,9 @@
                            (if evo-id {:evo-id evo-id} nil)))))
 
 (comment
-  (add-account {:account/evo-id 123 :account/xact-id 456} {} {})
-  (add-account {:account/evo-id 987 :account/xact-id 789} {} {})
-  (add-account {:account/evo-id nil :account/xact-id 456} {} {})
+  (add-account {:evo-id 123 :xact-id 456} {} {})
+  (add-account {:evo-id 987 :xact-id 789} {} {})
+  (add-account {:evo-id nil :xact-id 456} {} {})
   )
 
 (defn format-event [request message]
@@ -67,7 +67,11 @@
 
 (def commands
   [[:accounts/upsert {:xact-id s/Int
-                      :evo-id (s/maybe s/Int)}
+                      :evo-id s/Int}
+    add-account]
+   [:accounts/delete {:xact-id s/Int
+                      ;; nil or nothing
+                      (s/optional-key :evo-id) (s/constrained (s/maybe s/Any) nil?)}
     add-account]])
 
 (defn query-handler [args auth-info req]
