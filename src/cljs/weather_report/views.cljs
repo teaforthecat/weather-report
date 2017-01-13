@@ -21,11 +21,11 @@
     (translate :weather-report)]])
 
 (defn accounts-view []
-  [(c/toggle [:bones/logged-in?]
-             [:div.accounts-view
-              (c/add-account)
-              [c/accounts-table]]
-             [:div.accounts-view "hi"])])
+  [c/toggle [:bones/logged-in?]
+   [:div.accounts-view
+    (c/add-account)
+    [c/accounts-table]]
+   [:div.accounts-view "hi"]])
 
 ;; layouts
 (defmulti layout identity)
@@ -56,7 +56,6 @@
     (layout :application
             (accounts-view))))
 
-
 (defmethod e/handler :event/message
   [{:keys [db]} [channel message]]
   (let [id (:xact-id message)
@@ -71,7 +70,7 @@
   (let [{:keys [form-type identifier]} tap]
     (if (= identifier :new)
       {:dispatch (e/editable-response form-type identifier response)}
-      {:log {:message "response recieved, waiting for events..."}})))
+      {:log {:message "response received, waiting for events..."}})))
 
 
 

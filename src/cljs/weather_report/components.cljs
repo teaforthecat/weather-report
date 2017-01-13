@@ -7,6 +7,35 @@
              [reagent-forms.core :refer [bind-fields bind init-field]]
              [re-frame.core :refer [dispatch subscribe]]))
 
+
+(defn toggle
+  "usage:
+  subscribe to a value, and return the corresponding component
+  two form:
+  [toggle [:x :y :z]
+    [when-truthy-component]
+    [when-falsey-component]]
+
+  three form
+  [toggle [:x :y :z]
+    [when-nil-component]
+    [when-truthy-component]
+    [when-false-component]]"
+  ([subs true-form false-form]
+   (let [t (subscribe subs)]
+     (fn [subs true-form false-form]
+       (if @t
+         true-form
+         false-form))))
+  ([subs nil-form true-form false-form]
+   (let [t (subscribe subs)]
+     (fn [subs nil-form true-form false-form]
+       (let [v @t]
+         (cond
+           (nil? v) nil-form
+           (false? v) false-form
+           v true-form))))))
+
 (defn button [label event {:as attrs :or {}}]
   (let [with-class (update attrs :class str " sr-button")
         attributes (assoc with-class :on-click #(dispatch event))]
@@ -45,16 +74,55 @@
                                    {:xact-id id :evo-id nil}
                                    :identifier id
                                    :solo true))])
+(comment
+  (dispatch [:editable :accounts 123 :inputs {:xact-id 123 :evo-id 123}])
 
-(defn account-row [[id fusion]]
-  (let [{:keys [inputs]} (e/form :accounts id)]
-    [(fn []
-       ^{:key (inputs :xact-id)}
-       [:tr
-        [:td.center (inputs :xact-id)]
-        [:td.center  (inputs :evo-id)]
+  (dispatch [:editable :accounts 123 :inputs :xact-id 123])
+  (dispatch [:editable :accounts 123 :inputs :evo-id 123])
+
+  (dispatch [:editable :accounts 456 :inputs :xact-id 456])
+  (dispatch [:editable :accounts 456 :inputs :xact-id 123])
+  (dispatch [:request/query {:accounts :all}])
+  (:editable   @re-frame.db/app-db)
+
+  (into [:tbody]
+        ;; (map apply)
+        (map (fn [id a] [account-row id])
+         {123 {:inputs {:evo-id 123, :xact-id 123}}}))
+
+  (:edit (e/form :accounts id))
+
+  )
+
+(defn account-row [id]
+  (let [{:keys [inputs state reset save edit]} (e/form :accounts id)]
+    ;; ^{:key (inputs :xact-id)}
+    (fn [id]
+      [:tr
+       [toggle
+        [:editable :accounts id :state :editing :xact-id]
         [:td.center
-         [remove-btn (inputs :xact-id)]]])]))
+         [e/input :accounts id :xact-id
+          :type "text"
+          :on-blur reset
+          :on-key-down (e/detect-controls {:enter save
+                                           :escape reset})]]
+        [:td.center
+         {:on-double-click (edit :xact-id)}
+         (inputs :xact-id)]]
+       [toggle
+        [:editable :accounts id :state :editing :evo-id]
+        [:td.center
+         [e/input :accounts id :evo-id
+          :type "text"
+          :on-blur reset
+          :on-key-down (e/detect-controls {:enter save
+                                           :escape reset})]]
+        [:td.center
+         {:on-double-click (edit :evo-id)}
+         (inputs :evo-id)]]
+       [:td.center
+        [remove-btn (inputs :xact-id)]]])))
 
 (def accounts-empty
   [:tr
@@ -75,35 +143,8 @@
          [:tbody
           accounts-empty]
          (into [:tbody]
-               (map account-row @accounts)))])))
-
-(defn toggle
-  "usage:
-  subscribe to a value, and return the corresponding component
-  two form:
-  [toggle [:x :y :z]
-    [when-truthy-component]
-    [when-falsey-component]]
-
-  three form
-  [toggle [:x :y :z]
-    [when-nil-component]
-    [when-truthy-component]
-    [when-false-component]]"
-  ([subs true-form false-form]
-   (let [t (subscribe subs)]
-     (fn []
-       (if @t
-         true-form
-         false-form))))
-  ([subs nil-form true-form false-form]
-   (let [t (subscribe subs)]
-     (fn []
-       (let [v @t]
-         (cond
-           (nil? v) nil-form
-           (false? v) false-form
-           v true-form))))))
+               (map (fn [id] [account-row id])
+                    (keys @accounts))))])))
 
 (defn account-fusion-form []
   (let [{:keys [reset]} (e/form :accounts :new)]
@@ -140,40 +181,40 @@
    (button "New Account Fusion" [:editable :accounts :new :state :show true] {})])
 
 (defn login-form []
-  [(toggle [:editable :login :new :state :show]
-           [(let [{:keys [reset save errors]} (e/form :login :new)]
-              (fn []
-                [:div.sr-modal
-                 [:div.sr-modal-dialog
-                  [:div.sr-modal-header
-                   [:div.sr-modal-title
-                    "Login"]]
-                  [:div.sr-modal-body
-                   [:ol.form
-                    [:span
-                     (errors :message)]
-                    [:div.fields
-                     [:li.form-group
-                      [:label.control-label {:for :username} "Username"]
-                      [e/input :login :new :username
-                       :class "short form-control"
-                       :id :username
-                       :type "text"]]
-                     [:li.form-group
-                      [:label.control-label {:for :password} "Password"]
-                      [e/input :login :new :password
-                       :class "short form-control"
-                       :id :password
-                       :type "password"]]
-                     [:div.buttons
-                      [:button.sr-button {:on-click reset}
-                       "Cancel"]
-                      [:button.sr-button {:on-click #(dispatch [:request/login :login :new])}
-                       "Submit"]
-                      ]]]
-                   ]]]))]
-           [:button.sr-button {:on-click #(dispatch [:editable :login :new :state :show true])}
-            "Login"])])
+  [toggle [:editable :login :new :state :show]
+   [(let [{:keys [reset save errors]} (e/form :login :new)]
+      (fn []
+        [:div.sr-modal
+         [:div.sr-modal-dialog
+          [:div.sr-modal-header
+           [:div.sr-modal-title
+            "Login"]]
+          [:div.sr-modal-body
+           [:ol.form
+            [:span
+             (errors :message)]
+            [:div.fields
+             [:li.form-group
+              [:label.control-label {:for :username} "Username"]
+              [e/input :login :new :username
+               :class "short form-control"
+               :id :username
+               :type "text"]]
+             [:li.form-group
+              [:label.control-label {:for :password} "Password"]
+              [e/input :login :new :password
+               :class "short form-control"
+               :id :password
+               :type "password"]]
+             [:div.buttons
+              [:button.sr-button {:on-click reset}
+               "Cancel"]
+              [:button.sr-button {:on-click #(dispatch [:request/login :login :new])}
+               "Submit"]
+              ]]]
+           ]]]))]
+   [:button.sr-button {:on-click #(dispatch [:editable :login :new :state :show true])}
+    "Login"]])
 
 (defn user-info []
   (let [user-info (subscribe [:components :user-info])
@@ -184,6 +225,6 @@
         [:span]))))
 
 (defn login []
-  [(toggle [:bones/logged-in?]
-           (small-button "Logout" [:request/logout :logout :now])
-           [login-form])])
+  [toggle [:bones/logged-in?]
+   (small-button "Logout" [:request/logout :logout :now])
+   [login-form]])

@@ -5,6 +5,7 @@
   (:require [re-frame.core :as re-frame]
             ;; [re-frame.utils :refer [log error]]
             [weather-report.db :as db]
+            [bones.editable :as e]
             [bones.client :as client]
             [cljs.core.async :as a]
             [schema.core :as s]))
@@ -55,6 +56,12 @@
                                (:accounts db)))
                 [:account/xact-id :account/evo-id]))]
     [:request/command command args {:undo true}]))
+
+(defmethod handler [:response/login 200]
+  [{:keys [db client]} [channel response status tap]]
+  (let [{:keys [form-type identifier]} tap]
+    (client/start client) ;; this should trigger :event/client-status
+    {:dispatch (e/editable-reset form-type identifier {})}))
 
 #_(defmethod handler :response/login
   [db [channel response status tap]]
@@ -131,23 +138,25 @@
         )))
   db)
 
-#_(defmethod handler :response/query
-  [db [channel response status tap]]
-  (if (= 200 status)
-    (let [results (or (:results response) [])
-          accounts (mapv #(-> %
-                             (assoc :account/xact-id (:key %))
-                             (assoc :account/evo-id (get-in % [:value "evo-id"])))
-                        results)]
-      (assoc db :accounts accounts))
-    ;; todo error reporting
-    db))
+(defn result-to-editable-account [item]
+  (let [xact-id (:key item)
+        evo-id (get-in item [:value "evo-id"])]
+    {xact-id {:inputs {:xact-id xact-id :evo-id evo-id}}}))
 
-#_(defmethod handler :event/client-status
-  [db [channel event]]
-  (if-let [logged-in? (:bones/logged-in? event)]
-    (assoc db :bones/logged-in? true)
-    db))
+(defmethod e/handler [:response/query 200]
+  [{:keys [db]} [channel response status tap]]
+  (let [results (or (:results response) [])
+        accounts (into {} (map result-to-editable-account) results)]
+    ;; need to keep the :_meta
+    {:db (update-in db [:editable :accounts] merge accounts)}))
+
+(defmethod e/handler :event/client-status
+  [{:keys [db]} [channel event]]
+  (let [logged-in? (:bones/logged-in? event)]
+    (if logged-in?
+      {:dispatch [:request/query :accounts {:accounts :all}]
+       :db (assoc db :bones/logged-in? true)}
+      {:db (assoc db :bones/logged-in? false)})))
 
 #_(defmethod handler :event/message
   [db [channel event]]
