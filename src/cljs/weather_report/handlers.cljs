@@ -6,6 +6,8 @@
             ;; [re-frame.utils :refer [log error]]
             [weather-report.db :as db]
             [bones.editable :as e]
+            [bones.editable.response :as response]
+            [bones.editable.helpers :as h]
             [bones.client :as client]
             [cljs.core.async :as a]
             [schema.core :as s]))
@@ -61,7 +63,7 @@
   [{:keys [db client]} [channel response status tap]]
   (let [{:keys [form-type identifier]} tap]
     (client/start client) ;; this should trigger :event/client-status
-    {:dispatch (e/editable-reset form-type identifier {})}))
+    {:dispatch (h/editable-reset form-type identifier {})}))
 
 #_(defmethod handler :response/login
   [db [channel response status tap]]
@@ -143,18 +145,18 @@
         evo-id (get-in item [:value "evo-id"])]
     {xact-id {:inputs {:xact-id xact-id :evo-id evo-id}}}))
 
-(defmethod e/handler [:response/query 200]
+(defmethod response/handler [:response/query 200]
   [{:keys [db]} [channel response status tap]]
   (let [results (or (:results response) [])
         accounts (into {} (map result-to-editable-account) results)]
     ;; need to keep the :_meta
     {:db (update-in db [:editable :accounts] merge accounts)}))
 
-(defmethod e/handler :event/client-status
+(defmethod response/handler :event/client-status
   [{:keys [db]} [channel event]]
   (let [logged-in? (:bones/logged-in? event)]
     (if logged-in?
-      {:dispatch [:request/query :accounts {:accounts :all}]
+      {:dispatch [:request/query {:accounts :all}]
        :db (assoc db :bones/logged-in? true)}
       {:db (assoc db :bones/logged-in? false)})))
 

@@ -9,7 +9,10 @@
             ;; load all the subs immediately
             [weather-report.subs]
             [weather-report.views :as views]
-            [bones.editable :as e]))
+            [bones.editable :as e]
+            [bones.editable.request :as request]
+            [bones.editable.protocols :as p]
+            ))
 
 (when ^boolean js/goog.DEBUG
   (devtools/install!))
@@ -22,7 +25,7 @@
 
 ;; glue the two libraries together
 (extend-type client/Client
-  e/Client
+  p/Client
   (login [cmp args tap]
     (client/login cmp args tap))
   (logout [cmp tap]
@@ -41,7 +44,7 @@
                             :es/onmessage js/console.log
                             :es/connection-type :websocket})
   (client/start sys)
-  (e/set-client (:client @sys))
+  (request/set-client (:client @sys))
   ;; get the data connections setup,
   ;; then render
   (mount-root))

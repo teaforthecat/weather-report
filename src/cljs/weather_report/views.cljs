@@ -1,6 +1,8 @@
 (ns weather-report.views
   (:require [re-frame.core :refer [dispatch subscribe]]
             [weather-report.components :as c]
+            [bones.editable.response :as response]
+            [bones.editable.helpers :as h]
             [bones.editable :as e]))
 
 ;; todo: make dynamic
@@ -56,7 +58,7 @@
     (layout :application
             (accounts-view))))
 
-(defmethod e/handler :event/message
+(defmethod response/handler :event/message
   [{:keys [db]} [channel message]]
   (let [id (:xact-id message)
         evo-id (:evo-id message)]
@@ -65,11 +67,12 @@
       ;; deletion
       {:db (update-in db [:editable :accounts] dissoc id)})))
 
-(defmethod e/handler [:response/command 200]
+(defmethod response/handler [:response/command 200]
   [{:keys [db]} [channel response status tap]]
-  (let [{:keys [form-type identifier]} tap]
+  (let [{:keys [e-scope]} tap
+        [_ e-type identifier] e-scope]
     (if (= identifier :new)
-      {:dispatch (e/editable-response form-type identifier response)}
+      {:dispatch (h/editable-response e-type identifier response)}
       {:log {:message "response received, waiting for events..."}})))
 
 
