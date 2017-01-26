@@ -141,8 +141,10 @@
   db)
 
 (defn result-to-editable-account [item]
-  (let [xact-id (:key item)
-        evo-id (get-in item [:value "evo-id"])]
+  ;; TODO: conform to spec here instead
+  (let [xact-id (js/parseInt (:key item))
+        _evo-id (get-in item [:value "evo-id"])
+        evo-id (if _evo-id (js/parseInt _evo-id))]
     {xact-id {:inputs {:xact-id xact-id :evo-id evo-id}}}))
 
 (defmethod response/handler [:response/query 200]

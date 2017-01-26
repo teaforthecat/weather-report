@@ -69,6 +69,10 @@
   [[:accounts/upsert {:xact-id s/Int
                       :evo-id s/Int}
     add-account]
+   ;; update is required by bones.editable.forms save method
+   [:accounts/update {:xact-id s/Int
+                      :evo-id s/Int}
+    add-account]
    [:accounts/delete {:xact-id s/Int
                       ;; nil or nothing
                       (s/optional-key :evo-id) (s/constrained (s/maybe s/Any) nil?)}

@@ -67,6 +67,8 @@
       ;; deletion
       {:db (update-in db [:editable :accounts] dissoc id)})))
 
+(re-frame.core/reg-fx :log println)
+
 (defmethod response/handler [:response/command 200]
   [{:keys [db]} [channel response status tap]]
   (let [{:keys [e-scope]} tap
