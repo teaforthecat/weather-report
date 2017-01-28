@@ -41,7 +41,7 @@
                             :stream-handler re-frame/dispatch
                             :es/onopen js/console.log
                             :es/error js/console.log
-                            :es/onmessage js/console.log
+                            ;; :es/onmessage js/console.log
                             :es/connection-type :websocket})
   (client/start sys)
   (request/set-client (:client @sys))

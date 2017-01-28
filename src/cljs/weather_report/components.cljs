@@ -96,7 +96,6 @@
 
 (defn account-row [id]
   (let [{:keys [inputs state reset save edit]} (e/form :accounts id)]
-    ;; ^{:key (inputs :xact-id)}
     (fn [id]
       [:tr
        [toggle
@@ -143,7 +142,9 @@
          [:tbody
           accounts-empty]
          (into [:tbody]
-               (map (fn [id] [account-row id])
+               (map (fn [id]
+                      ^{:key id}
+                      [account-row id])
                     (keys @accounts))))])))
 
 (defn account-fusion-form []

@@ -63,7 +63,8 @@
   (let [id (:xact-id message)
         evo-id (:evo-id message)]
     (if evo-id
-      {:db (update-in db [:editable :accounts id :inputs] merge message)}
+      {:dispatch [:editable [:editable :accounts id :inputs message]
+                            [:editable :accounts id :state :editing :evo-id false]]}
       ;; deletion
       {:db (update-in db [:editable :accounts] dissoc id)})))
 
@@ -71,10 +72,21 @@
 
 (defmethod response/handler [:response/command 200]
   [{:keys [db]} [channel response status tap]]
-  (let [{:keys [e-scope]} tap
+  (let [{:keys [e-scope args command]} tap
         [_ e-type identifier] e-scope]
-    (if (= identifier :new)
+    (cond
+      (= identifier :new)
       {:dispatch (h/editable-response e-type identifier response)}
+      (= command :accounts/update)
+      ;; bug in e-scope
+      ;; :response/command
+      ;; 1
+      ;; {:args {:evo-id 88866, :xact-id 777}, :topic "accounts", :partition 0, :offset 47}
+      ;; 2200
+      ;; 3{:command :accounts/update, :args {:evo-id 88866, :xact-id 777}, :e-scope [:editable :accounts]}
+      ;; {:dispatch [:editable e-type identifier :state :editing :evo-id false]}
+      {:log {:message "response received, waiting for events..."}}
+      (= command :accounts/delete)
       {:log {:message "response received, waiting for events..."}})))
 
 
