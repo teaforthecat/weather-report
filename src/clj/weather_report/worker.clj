@@ -9,8 +9,6 @@
   (let [k (:key message)
         v (:value message)
         offset (:offset message)]
-    (println (str "publishing key: " (:key message)))
-    (println (str "publishing value: " (:value message)))
     (redis/write redis "accounts" k v)
     ;; converted from json
     (redis/publish redis "accounts" {:evo-id (get v "evo-id")

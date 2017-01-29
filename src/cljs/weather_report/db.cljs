@@ -1,6 +1,6 @@
 (ns weather-report.db
   (:require [weather-report.local-storage :as storage]
-            [accounts :as accounts]
+            [weather-report.accounts :as accounts]
             [cljs.spec :as s]))
 
 

@@ -44,7 +44,6 @@
   )
 
 (defn format-event [request message]
-  (println (str "format-event: " message))
   {;; event-types not supported
    :data message})
 

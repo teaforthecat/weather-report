@@ -1,4 +1,4 @@
-(ns accounts
+(ns weather-report.accounts
   (:require #?(:cljs [cljs.spec :as s]
                :clj [clojure.spec :as s])
             ))

@@ -72,28 +72,6 @@
    ;; to delete evo-id is to invoke log compaction is to delete the fusion
    (small-button "Remove" (command :accounts/delete {:evo-id nil :xact-id id}))])
 
-(comment
-  (dispatch (command :accounts/delete {:evo-id nil :xact-id 123}))
-
-  (dispatch [:editable :accounts 123 :inputs {:xact-id 123 :evo-id 123}])
-
-  (dispatch [:editable :accounts 123 :inputs :xact-id 123])
-  (dispatch [:editable :accounts 123 :inputs :evo-id 123])
-
-  (dispatch [:editable :accounts 456 :inputs :xact-id 456])
-  (dispatch [:editable :accounts 456 :inputs :xact-id 123])
-  (dispatch [:request/query {:accounts :all}])
-  (:editable   @re-frame.db/app-db)
-
-  (into [:tbody]
-        ;; (map apply)
-        (map (fn [id a] [account-row id])
-         {123 {:inputs {:evo-id 123, :xact-id 123}}}))
-
-  (:edit (e/form :accounts id))
-
-  )
-
 (defn account-row [id]
   (let [{:keys [inputs state reset save edit]} (e/form :accounts id)]
     (fn [id]
