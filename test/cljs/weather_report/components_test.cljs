@@ -25,7 +25,7 @@
 (deftest accounts
   (testing "one account is rendered"
     (let [account {:account/xact-id 123 :account/evo-id 321}
-          output (c/accounts-list)]
+          output (c/accounts-table)]
       (dispatch-sync [:event/message account])
       (is (= 123 (get-in (output)
                          [1 ; :div.accounts-list

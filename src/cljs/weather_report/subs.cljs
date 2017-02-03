@@ -9,16 +9,6 @@
  (fn [db]
    (:name @db)))
 
-;; (re-frame/register-sub
-;;  :active-panel
-;;  (fn [db _]
-;;    (reaction (:active-panel @db))))
-
-;; (re-frame/register-sub
-;;  :bones/logged-in?
-;;  (fn [db _]
-;;    (reaction (:bones/logged-in? @db))))
-
 (re-frame/reg-sub
  :accounts
  (fn [db _]

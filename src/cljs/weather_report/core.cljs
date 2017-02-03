@@ -11,8 +11,7 @@
             [weather-report.views :as views]
             [bones.editable :as e]
             [bones.editable.request :as request]
-            [bones.editable.protocols :as p]
-            ))
+            [bones.editable.protocols :as p]))
 
 (when ^boolean js/goog.DEBUG
   (devtools/install!))
@@ -35,6 +34,10 @@
   (query [cmp args tap]
     (client/query cmp args tap)))
 
+(defn start-client [{:keys [start] :as args}]
+  (client/stop sys)
+  (client/start sys))
+
 (defn ^:export init []
   (re-frame/dispatch-sync [:initialize-db])
   (client/build-system sys {:url "http://localhost:8080/api"
@@ -43,8 +46,11 @@
                             :es/error js/console.log
                             ;; :es/onmessage js/console.log
                             :es/connection-type :websocket})
-  (client/start sys)
-  (request/set-client (:client @sys))
+
   ;; get the data connections setup,
+  (client/start sys)
+  (re-frame/reg-cofx :client #(assoc % :client (:client @sys)))
+  (re-frame/reg-fx :start-client start-client) ;; for login handler
+
   ;; then render
   (mount-root))

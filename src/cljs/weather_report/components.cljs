@@ -47,17 +47,8 @@
 (defn undo []
   [:undo/do-undo])
 
-(defn transition [cmp & attrs]
-  [:component/transition cmp #(apply assoc % attrs)])
-
 (defn command [cmd args & {:as tap}]
   [:request/command cmd args tap])
-
-(defn submit [cmd form errors]
-  (command cmd @form :errors errors :form form))
-
-(defn cancel [cmp]
-  (transition cmp :show false :form {} :errors {}))
 
 (defn undo-button []
   (let [logged-in? (subscribe [:bones/logged-in?])
