@@ -1,15 +1,28 @@
 (defproject weather-report "0.2.0"
-  :dependencies [[org.clojure/clojure "1.8.0"]
+  :dependencies [[org.clojure/clojure "1.9.0-alpha14"]
                  [org.clojure/clojurescript "1.9.229"]
 
                  [com.stuartsierra/component "0.3.1"]
                  ;; bones deps
                  [bones/conf "0.2.2"]
-                 [bones/http "0.2.5"]
+
+                 ;; [bones/http "0.2.5"]
+                 [buddy/buddy-auth "1.4.1"]
+                 [buddy/buddy-hashers "1.2.0"]
+                 [aleph "0.4.2-alpha12"]
+                 [yada/lean "1.2.1"]
+                 [bidi "2.0.16"]
+                 ;; [bones/http "0.2.5"]
+
+                 [manifold "0.1.6-alpha4"]
+
+
                  ;; bones.stream
                  [com.taoensso/carmine "2.12.2"]
                  [org.onyxplatform/onyx-kafka "0.8.8.0"]
-                 [manifold "0.1.4"]
+                 ;; conflicts with aleph
+                 ;; [manifold "0.1.4"]
+                 [com.cognitect/transit-clj "0.8.297"]
 
                  ;; domain specific
                  [org.clojars.pntblnk/clj-ldap "0.0.12"]
@@ -51,6 +64,7 @@
    {:dependencies [
                    [figwheel-sidecar "0.5.4-3"]
                    [com.cemerick/piggieback "0.2.1"]
+                   [org.clojure/test.check "0.9.0"]
                    [binaryage/devtools "0.8.3"]]
     :plugins      [[lein-figwheel "0.5.4-3"]
                    [lein-doo "0.1.7"]

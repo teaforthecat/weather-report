@@ -1,7 +1,7 @@
 (ns weather-report.core
   (:gen-class)
   (:require [com.stuartsierra.component :as component]
-            [schema.core :as s]
+            [clojure.spec :as s]
             [manifold.stream :as ms]
             [bones.conf :as bc]
             [bones.http :as http]
@@ -10,6 +10,7 @@
             [bones.stream.redis :as redis]
             [weather-report.auth :as auth]
             [weather-report.worker :as worker]
+            [weather-report.accounts :as accounts]
             [clojure.string :as string]
             [bones.conf :as conf]))
 
@@ -24,7 +25,10 @@
       nil ;; 401
       )))
 
-(def login-schema {:username s/Str :password s/Str})
+;; (def login-schema {:username s/Str :password s/Str})
+(s/def ::username string?)
+(s/def ::password string?)
+(s/def ::login (s/keys :req-un [::username ::password]))
 
 (defn add-account [args auth-info req]
   (let [{:keys [xact-id evo-id]} args
@@ -65,17 +69,17 @@
   )
 
 (def commands
-  [[:accounts/upsert {:xact-id s/Int
+  [[:accounts/upsert ::accounts/upsert  #_{:xact-id s/Int
                       :evo-id s/Int}
-    add-account]
+    'weather-report.core/add-account]
    ;; update is required by bones.editable.forms save method
-   [:accounts/update {:xact-id s/Int
+   [:accounts/update ::accounts/upsert #_{:xact-id s/Int
                       :evo-id s/Int}
-    add-account]
-   [:accounts/delete {:xact-id s/Int
+    'weather-report.core/add-account]
+   [:accounts/delete ::accounts/delete #_{:xact-id s/Int
                       ;; nil or nothing
                       (s/optional-key :evo-id) (s/constrained (s/maybe s/Any) nil?)}
-    add-account]])
+    'weather-report.core/add-account]])
 
 (defn query-handler [args auth-info req]
   (let [{:keys [account accounts]} args
@@ -84,18 +88,20 @@
       {:results @(redis/fetch redi account)}
       {:results @(redis/fetch-all redi "accounts")})))
 
-(def query-schema {(s/optional-key :accounts) s/Any
+#_(def query-schema {(s/optional-key :accounts) s/Any
                    (s/optional-key :account) s/Int})
+
+(def query-schema ::accounts/list)
 
 (defn conf []
   (bc/map->Conf
    ;; WR_ENV is a made up environment variable to set in a deployed environment.
    ;; The resolved file can be used to override the secret (and everything else in conf)
    {:conf-files ["config/common.edn" "config/ldap.edn" "config/$WR_ENV.edn"]
-    :http/auth {:allow-origin "http://localhost:3449"}
-    :http/service {:port 8080}
-    :http/handlers {:mount-path "/api"
-                    :login [login-schema login]
+    ;; ::http/auth {:allow-origin "http://localhost:3449"}
+    ::http/service {:port 8080}
+    ::http/handlers {:mount-path "/api"
+                    :login [::login login]
                     :commands commands
                     :query [query-schema query-handler]
                     :event-stream event-stream}

@@ -10,7 +10,6 @@
 
 (re-frame.core/reg-fx :log println)
 
-
 (re-frame.core/reg-event-db
  :initialize-db
  (fn [_ _]
