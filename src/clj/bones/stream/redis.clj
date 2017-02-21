@@ -45,10 +45,12 @@
     (map car/close-listener @listeners)
     (reset! listeners [])
     cmp)
+
   Publish
   (publish [cmp channel message]
     (car/wcar {:spec spec} ;; use default pool option
               (car/publish channel message)))
+
   Subscribe
   (subscribe [cmp channel stream]
     ; one user/browser connection (through local pool)
@@ -58,6 +60,7 @@
             (car/subscribe channel))]
       (swap! listeners conj listener)
       listener))
+
   MaterializedView
   (write [cmp topic rkey value]
     (let [{:keys [spec]} cmp

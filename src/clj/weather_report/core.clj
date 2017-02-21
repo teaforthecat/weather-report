@@ -42,23 +42,23 @@
                            (if evo-id {:evo-id evo-id} nil)))))
 
 (comment
+  ;; create
   (add-account {:evo-id 123 :xact-id 456} {} {})
-  (add-account {:evo-id 987 :xact-id 789} {} {})
+  ;; update
+  (add-account {:evo-id 987 :xact-id 456} {} {})
+  ;; delete
   (add-account {:evo-id nil :xact-id 456} {} {})
   )
 
 (defn format-event [request message]
-  {;; event-types not supported
-   :data message})
+  {:data message})
 
 (defn event-stream [request auth-info]
-  (let [user-id 1
-        redis (:redis @sys)
+  (let [redis (:redis @sys)
         message-stream (ms/stream)
         _ (.subscribe redis "accounts" message-stream)
         events (ms/transform (map (partial format-event request))
-                             message-stream)
-        ]
+                             message-stream)]
     events))
 
 (comment
@@ -69,16 +69,12 @@
   )
 
 (def commands
-  [[:accounts/upsert ::accounts/upsert  #_{:xact-id s/Int
-                      :evo-id s/Int}
+  [[:accounts/upsert ::accounts/upsert
     'weather-report.core/add-account]
    ;; update is required by bones.editable.forms save method
-   [:accounts/update ::accounts/upsert #_{:xact-id s/Int
-                      :evo-id s/Int}
+   [:accounts/update ::accounts/upsert
     'weather-report.core/add-account]
-   [:accounts/delete ::accounts/delete #_{:xact-id s/Int
-                      ;; nil or nothing
-                      (s/optional-key :evo-id) (s/constrained (s/maybe s/Any) nil?)}
+   [:accounts/delete ::accounts/delete
     'weather-report.core/add-account]])
 
 (defn query-handler [args auth-info req]
@@ -88,9 +84,6 @@
       {:results @(redis/fetch redi account)}
       {:results @(redis/fetch-all redi "accounts")})))
 
-#_(def query-schema {(s/optional-key :accounts) s/Any
-                   (s/optional-key :account) s/Int})
-
 (def query-schema ::accounts/list)
 
 (defn conf []
@@ -98,7 +91,6 @@
    ;; WR_ENV is a made up environment variable to set in a deployed environment.
    ;; The resolved file can be used to override the secret (and everything else in conf)
    {:conf-files ["config/common.edn" "config/ldap.edn" "config/$WR_ENV.edn"]
-    ;; ::http/auth {:allow-origin "http://localhost:3449"}
     ::http/service {:port 8080}
     ::http/handlers {:mount-path "/api"
                     :login [::login login]
@@ -108,9 +100,9 @@
     :stream {:serialization-format :json-plain}}))
 
 (defn build-system [system config]
-  (let [cmp (if (= "some-condition" "is-true")
-              (component/using (auth/map->LDAP {}) [:conf])
-              (component/using (auth/map->FakeLDAP {}) [:conf]))]
+  (let [cmp (if (:use-fake-ldap config) ;; top level keyword
+              (component/using (auth/map->FakeLDAP {}) [:conf])
+              (component/using (auth/map->LDAP {}) [:conf]))]
     (swap! system assoc :ldap cmp)))
 
 (defn init-system [config]

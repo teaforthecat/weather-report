@@ -67,17 +67,7 @@
   (let [{:keys [inputs state reset save edit]} (e/form :accounts id)]
     (fn [id]
       [:tr
-       [toggle
-        [:editable :accounts id :state :editing :xact-id]
-        [:td.center
-         [e/input :accounts id :xact-id
-          :type "text"
-          :on-blur reset
-          :on-key-down (e/detect-controls {:enter save
-                                           :escape reset})]]
-        [:td.center
-         {:on-double-click (edit :xact-id)}
-         (inputs :xact-id)]]
+       [:td.center (inputs :xact-id)]
        [toggle
         [:editable :accounts id :state :editing :evo-id]
         [:td.center

@@ -1,5 +1,6 @@
 {:ldap
- {:con
+ {:use-fake-ldap true
+  :con
   {:host [{:address "example.com"}]
    :bind-dn "CN=user-name,OU=user-group,OU=user-group,OU=part,DC=of,DC=domain,DC=name"
    :password "-redacted-"
