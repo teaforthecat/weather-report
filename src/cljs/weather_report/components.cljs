@@ -4,7 +4,6 @@
              [reagent.core :as reagent]
              [bones.editable :as e]
              [clojure.string :refer [join]]
-             [reagent-forms.core :refer [bind-fields bind init-field]]
              [re-frame.core :refer [dispatch subscribe]]))
 
 

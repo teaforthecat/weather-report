@@ -29,7 +29,7 @@
 
                  ]
 
-  :plugins [[lein-cljsbuild "1.1.3"]]
+  :plugins [[lein-cljsbuild "1.1.5"]]
 
   :min-lein-version "2.5.3"
 
@@ -78,7 +78,9 @@
      :compiler     {:main            weather-report.core
                     :output-to       "resources/public/js/compiled/app.js"
                     :optimizations   :advanced
-                    :closure-defines {goog.DEBUG false}
+                    :closure-defines {goog.DEBUG false
+                                      ;; served on same domain
+                                      weather-report.core/api-uri "/api"}
                     :pretty-print    false}}
     {:id           "test"
      :source-paths ["src/cljs" "src/cljc" "test/cljs"]

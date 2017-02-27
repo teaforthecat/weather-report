@@ -13,6 +13,9 @@
             [bones.editable.request :as request]
             [bones.editable.protocols :as p]))
 
+;; overridden in min/production build
+(goog-define api-uri "http://localhost:8080")
+
 (when ^boolean js/goog.DEBUG
   (devtools/install!))
 
@@ -40,7 +43,7 @@
 
 (defn ^:export init []
   (re-frame/dispatch-sync [:initialize-db])
-  (client/build-system sys {:url "http://localhost:8080/api"
+  (client/build-system sys {:url weather-report.core/api-uri
                             :stream-handler re-frame/dispatch
                             :es/onopen js/console.log
                             :es/error js/console.log

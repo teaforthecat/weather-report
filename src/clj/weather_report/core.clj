@@ -86,18 +86,22 @@
 
 (def query-schema ::accounts/list)
 
-(defn conf []
-  (bc/map->Conf
-   ;; WR_ENV is a made up environment variable to set in a deployed environment.
-   ;; The resolved file can be used to override the secret (and everything else in conf)
-   {:conf-files ["config/common.edn" "config/ldap.edn" "config/$WR_ENV.edn"]
-    ::http/service {:port 8080}
-    ::http/handlers {:mount-path "/api"
-                    :login [::login login]
-                    :commands commands
-                    :query [query-schema query-handler]
-                    :event-stream event-stream}
-    :stream {:serialization-format :json-plain}}))
+(defn conf [args]
+  (let [conf-file-arg (first args)]
+    (bc/map->Conf
+     ;; WR_ENV is a made up environment variable to set in a deployed environment.
+     ;; The resolved file can be used to override the secret (and everything else in conf)
+     {:conf-files (remove nil? ["config/common.edn"
+                                "config/ldap.edn"
+                                "config/$WR_ENV.edn"
+                                conf-file-arg])
+      ::http/service {:port 8080}
+      ::http/handlers {:mount-path "/api"
+                       :login [::login login]
+                       :commands commands
+                       :query [query-schema query-handler]
+                       :event-stream event-stream}
+      :stream {:serialization-format :json-plain}})))
 
 (defn build-system [system config]
   (let [cmp (if (:use-fake-ldap config) ;; top level keyword
@@ -119,7 +123,7 @@
                                (println "Shutting down...")
                                (swap! sys component/stop-system))))
 
-  (init-system (conf))
+  (init-system (conf args))
   (swap! sys component/start-system))
 
 (comment
