@@ -44,19 +44,8 @@
 (defn small-button [label event & {:as attrs}]
   (button label event (update attrs :class str " small borderless" )))
 
-(defn undo []
-  [:undo/do-undo])
-
 (defn command [cmd args & {:as tap}]
   [:request/command cmd args tap])
-
-(defn undo-button []
-  (let [logged-in? (subscribe [:bones/logged-in?])
-        undos (subscribe [:undos])]
-    (fn []
-      (if (and @logged-in? (not-empty @undos))
-        [:div.actions
-         (small-button "Undo" (undo))]))))
 
 (defn remove-btn [id]
   [:div.actions

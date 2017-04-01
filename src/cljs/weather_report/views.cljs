@@ -45,7 +45,6 @@
        [:div.pure-u-3-8
         [:div#admin-nav.sr-fload-right
          [:ul.navbar
-          [:li.separator [c/undo-button]]
           [:li.separator [c/user-info]]
           [:li.separator.last
            (c/login)]]]]]]]
