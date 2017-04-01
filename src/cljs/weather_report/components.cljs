@@ -1,6 +1,7 @@
 (ns weather-report.components
   (:require  [weather-report.subs]
              [weather-report.handlers]
+             [weather-report.accounts :as accounts]
              [reagent.core :as reagent]
              [bones.editable :as e]
              [clojure.string :refer [join]]
@@ -107,39 +108,26 @@
                       [account-row id])
                     (keys @accounts))))])))
 
-(defn account-fusion-form []
-  (let [{:keys [reset]} (e/form :accounts :new)]
-    (fn []
-      [:div.sr-modal
-       [:div.sr-modal-dialog
-        [:div.sr-modal-header
-         [:div.sr-modal-title
-          "Fuse Accounts"]]
-        [:div.sr-modal-body
-         [:ol.form
-          [:div
-           [:div.fields
-            [:li.form-group
-             [:label.control-label {:for :xact-id} "XactId"]
-             [e/input :accounts :new :xact-id
-              :class "short form-control"
-              :id :xact-id
-              :type "text"]]
-            [:li.form-group
-             [:label.control-label {:for :evo-id} "EvoId"]
-             [e/input :accounts :new :evo-id
-              :class "short form-control"
-              :type "text"]]
-            [:div.buttons
-             [:button.sr-button {:on-click reset}
-              "Cancel"]
-             [:button.sr-button {:on-click #(dispatch [:request/command :accounts/upsert :new])}
-              "Submit"]]]]]]]])))
+;; start a sketch of what an error reporting form helper might look like
 
-(defn add-account []
-  [toggle [:editable :accounts :new :state :show]
-   [account-fusion-form]
-   (button "New Account Fusion" [:editable :accounts :new :state :show true] {})])
+(def humanize
+  {::accounts/xact-id "XactId is not an integer"
+   ::accounts/evo-id  "EvoId is not an integer"
+   })
+
+(defn extract-problems [errors]
+  (get-in errors [:explain-data :cljs.spec/problems]))
+
+(defn problem-attributes
+  "the tail of the spec"
+  [errors]
+  (set (map (comp last :via) (extract-problems errors))))
+
+(defn translate-problems [errors]
+  (map humanize
+       (problem-attributes errors)))
+
+;; end sketch
 
 (defn modal [&{:keys [fields title errors cancel submit]}]
   [:div.sr-modal
@@ -151,13 +139,40 @@
      [:ol.form
       [:li.errors
        [:span
-        (errors :message)]]
+        (or (errors :message)
+            (into [:ul]
+                  (mapv (partial conj [:li.error-message])
+                        (translate-problems (errors)))))
+        ]]
       (into [:div.fields] fields)
       [:div.buttons
        [:button.sr-button {:on-click (:on-click cancel)}
         (:label cancel "Cancel")]
        [:button.sr-button {:on-click (:on-click submit)}
         (:label submit "Submit")]]]]]])
+
+(defn account-fusion-form []
+  (let [{:keys [reset errors]} (e/form :accounts :new)]
+    (modal
+     :title "Fuse Accounts"
+     :errors errors
+     :cancel {:on-click reset
+              :label "Cancel"}
+     :submit {:on-click #(dispatch [:request/command :accounts/upsert :new])
+              :label "Submit"}
+     :fields [
+              [:li.form-group
+               [:label.control-label {:for :xact-id} "XactId"]
+               [e/input :accounts :new :xact-id
+                :class "short form-control"
+                :id :xact-id
+                :type "text"]]
+              [:li.form-group
+               [:label.control-label {:for :evo-id} "EvoId"]
+               [e/input :accounts :new :evo-id
+                :class "short form-control"
+                :type "text"]]
+              ])))
 
 (defn login-modal []
   (let [{:keys [reset errors]} (e/form :login :new)]
@@ -188,6 +203,16 @@
    [:button.sr-button {:on-click #(dispatch [:editable :login :new :state :show true])}
     "Login"]])
 
+(defn login []
+  [toggle [:bones/logged-in?]
+   (small-button "Logout" [:request/logout :logout :now])
+   [login-form]])
+
+(defn add-account []
+  [toggle [:editable :accounts :new :state :show]
+   [account-fusion-form]
+   (button "New Account Fusion" [:editable :accounts :new :state :show true] {})])
+
 (defn user-info []
   (let [user-info (subscribe [:components :user-info])
         logged-in? (subscribe [:bones/logged-in?])]
@@ -195,8 +220,3 @@
       (if (and @logged-in?  @user-info)
         [:span.user-info (str "Hello " (:display-name @user-info))]
         [:span]))))
-
-(defn login []
-  [toggle [:bones/logged-in?]
-   (small-button "Logout" [:request/logout :logout :now])
-   [login-form]])
