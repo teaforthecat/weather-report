@@ -69,12 +69,14 @@
        [:td.center (inputs :xact-id)]
        [toggle
         [:editable :accounts id :state :editing :evo-id]
+        ;; when :editing :evo-id
         [:td.center
          [e/input :accounts id :evo-id
           :type "text"
           :on-blur reset
           :on-key-down (e/detect-controls {:enter save
                                            :escape reset})]]
+        ;; when not :editing :evo-id
         [:td.center
          {:on-double-click (edit :evo-id)}
          (inputs :evo-id)]]
@@ -139,39 +141,50 @@
    [account-fusion-form]
    (button "New Account Fusion" [:editable :accounts :new :state :show true] {})])
 
+(defn modal [&{:keys [fields title errors cancel submit]}]
+  [:div.sr-modal
+   [:div.sr-modal-dialog
+    [:div.sr-modal-header
+     [:div.sr-modal-title
+      title]]
+    [:div.sr-modal-body
+     [:ol.form
+      [:li.errors
+       [:span
+        (errors :message)]]
+      (into [:div.fields] fields)
+      [:div.buttons
+       [:button.sr-button {:on-click (:on-click cancel)}
+        (:label cancel "Cancel")]
+       [:button.sr-button {:on-click (:on-click submit)}
+        (:label submit "Submit")]]]]]])
+
+(defn login-modal []
+  (let [{:keys [reset errors]} (e/form :login :new)]
+    (modal
+     :title "Login"
+     :errors errors
+     :cancel {:on-click reset
+              :label "Cancel"}
+     :submit {:on-click #(dispatch [:request/login :login :new])
+              :label "Submit"}
+     :fields [
+              [:li.form-group
+               [:label.control-label {:for :username} "Username"]
+               [e/input :login :new :username
+                :class "short form-control"
+                :id :username
+                :type "text"]]
+              [:li.form-group
+               [:label.control-label {:for :password} "Password"]
+               [e/input :login :new :password
+                :class "short form-control"
+                :id :password
+                :type "password"]]])))
+
 (defn login-form []
   [toggle [:editable :login :new :state :show]
-   [(let [{:keys [reset save errors]} (e/form :login :new)]
-      (fn []
-        [:div.sr-modal
-         [:div.sr-modal-dialog
-          [:div.sr-modal-header
-           [:div.sr-modal-title
-            "Login"]]
-          [:div.sr-modal-body
-           [:ol.form
-            [:span
-             (errors :message)]
-            [:div.fields
-             [:li.form-group
-              [:label.control-label {:for :username} "Username"]
-              [e/input :login :new :username
-               :class "short form-control"
-               :id :username
-               :type "text"]]
-             [:li.form-group
-              [:label.control-label {:for :password} "Password"]
-              [e/input :login :new :password
-               :class "short form-control"
-               :id :password
-               :type "password"]]
-             [:div.buttons
-              [:button.sr-button {:on-click reset}
-               "Cancel"]
-              [:button.sr-button {:on-click #(dispatch [:request/login :login :new])}
-               "Submit"]
-              ]]]
-           ]]]))]
+   [login-modal]
    [:button.sr-button {:on-click #(dispatch [:editable :login :new :state :show true])}
     "Login"]])
 

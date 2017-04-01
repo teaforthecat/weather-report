@@ -11,8 +11,7 @@
             [weather-report.auth :as auth]
             [weather-report.worker :as worker]
             [weather-report.accounts :as accounts]
-            [clojure.string :as string]
-            [bones.conf :as conf]))
+            [clojure.string :as string]))
 
 (def sys (atom {}))
 
@@ -87,7 +86,8 @@
 (def query-schema ::accounts/list)
 
 (defn conf [args]
-  (let [conf-file-arg (first args)]
+  (let [conf-file-arg (first args)
+        use-fake-ldap (.indexOf args "-use-fake-ldap")]
     (bc/map->Conf
      ;; WR_ENV is a made up environment variable to set in a deployed environment.
      ;; The resolved file can be used to override the secret (and everything else in conf)
@@ -95,6 +95,7 @@
                                 "config/ldap.edn"
                                 "config/$WR_ENV.edn"
                                 conf-file-arg])
+      :use-fake-ldap use-fake-ldap
       ::http/service {:port 8080}
       ::http/handlers {:mount-path "/api"
                        :login [::login login]
@@ -129,7 +130,7 @@
 (comment
   ;; for the repl
   (println "hi")
-  (-main) ; backend process
+  (-main nil "-use-fake-ldap") ; backend process
   (user/fig) ; frontend process
   (user/cljs) ; switch to browser repl `:cljs/quit' to switch back
   :cljs/quit

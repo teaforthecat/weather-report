@@ -5,11 +5,11 @@
                  [com.stuartsierra/component "0.3.1"]
                  ;; bones deps
                  [bones/conf "0.2.2"]
-                 [bones/http "0.3.0"]
+                 [bones/http "0.3.1"]
 
 
                  ;; bones.stream
-                 [com.taoensso/carmine "2.12.2"]
+                 [com.taoensso/carmine "2.16.0"]
                  [org.onyxplatform/onyx-kafka "0.8.8.0"]
                  ;; [manifold "0.1.6-alpha4"] ;; provided by aleph
                  [com.cognitect/transit-clj "0.8.297"]
@@ -24,7 +24,7 @@
                  [cljsjs/react-with-addons "15.2.1-0"]
                  [re-frame "0.9.0"]
                  [secretary "1.2.3"]
-                 [bones/client "0.2.3"]
+                 [bones/client "0.2.5"]
                  [bones/editable "0.1.4"]
 
                  ]
@@ -80,7 +80,10 @@
                     :optimizations   :advanced
                     :closure-defines {goog.DEBUG false
                                       ;; served on same domain
-                                      weather-report.core/api-uri "/api"}
+                                      weather-report.core/api-uri "/api"
+                                      ;; weather-report.core/api-uri "http://qc-rolodex1.ep.gdi/api"
+                                      ;; weather-report.core/api-uri "http://localhost:8080/api"
+                                      }
                     :pretty-print    false}}
     {:id           "test"
      :source-paths ["src/cljs" "src/cljc" "test/cljs"]

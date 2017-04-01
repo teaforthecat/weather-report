@@ -14,10 +14,11 @@
     (redis/publish redis "accounts" {:evo-id (get v "evo-id")
                                      :xact-id k})))
 
-(defrecord Worker [conf consumer redis]
+(defrecord Worker []
   component/Lifecycle
   (start [cmp]
     (let [consumer (:consumer cmp)
+          conf (:conf cmp)
           redis (:redis cmp)]
       ;; use conf for group-id
       ;; todo how to start from beginning

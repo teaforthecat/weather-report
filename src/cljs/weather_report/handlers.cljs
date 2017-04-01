@@ -8,7 +8,11 @@
 (def debug?
   ^boolean js/goog.DEBUG)
 
-(re-frame.core/reg-fx :log println)
+(defn log [msg]
+  (when debug?
+    (.log js/console msg)))
+
+(re-frame.core/reg-fx :log log)
 
 (re-frame.core/reg-event-db
  :initialize-db
@@ -19,9 +23,14 @@
   [{:keys [db client]} [channel response status tap]]
   (let [{:keys [e-scope]} tap
         [_ e-type identifier] e-scope]
-    ;; (c/start client) ;; this should trigger :event/client-status
     {:dispatch (h/editable-reset e-type identifier {})
      :start-client {:start true}}))
+
+(defmethod response/handler [:response/login 401]
+  [{:keys [db client]} [channel response status tap]]
+  (let [{:keys [e-scope]} tap
+        [_ e-type identifier] e-scope]
+    {:dispatch (into e-scope [:errors :message "Invalid username or password"])}))
 
 (defn result-to-editable-account [item]
   ;; TODO: conform to spec here instead

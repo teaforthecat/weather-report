@@ -1,3 +1,2 @@
 {:bones.http/auth {:secret "vmZZi4t0OQsJjY86thDsoWih3wpMNEB6"
-                   :allow-origin "http://localhost:3449"}
- :use-fake-ldap true}
+                   :allow-origin "http://localhost:8090"}}
