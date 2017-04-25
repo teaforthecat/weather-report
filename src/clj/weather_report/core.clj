@@ -87,7 +87,7 @@
 
 (defn conf [args]
   (let [conf-file-arg (first args)
-        use-fake-ldap (.indexOf args "-use-fake-ldap")]
+        use-fake-ldap (< 0 (.indexOf args "-use-fake-ldap"))]
     (bc/map->Conf
      ;; WR_ENV is a made up environment variable to set in a deployed environment.
      ;; The resolved file can be used to override the secret (and everything else in conf)
@@ -131,6 +131,8 @@
   ;; for the repl
   (println "hi")
   (-main nil "-use-fake-ldap") ; backend process
+  ;; (-main nil)
+
   (user/fig) ; frontend process
   (user/cljs) ; switch to browser repl `:cljs/quit' to switch back
   :cljs/quit

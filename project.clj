@@ -24,7 +24,7 @@
                  [cljsjs/react-with-addons "15.2.1-0"]
                  [re-frame "0.9.0"]
                  [secretary "1.2.3"]
-                 [bones/client "0.2.5"]
+                 [bones/client "0.2.6"]
                  [bones/editable "0.1.4"]
 
                  ]

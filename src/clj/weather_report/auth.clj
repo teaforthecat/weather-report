@@ -37,7 +37,7 @@
   component/Lifecycle
   (start [cmp]
     (let [conn-info (get-in cmp [:conf :ldap :connection])
-             search-info (get-in cmp [:conf :ldap :search])]
+          search-info (get-in cmp [:conf :ldap :search])]
       (if conn-info
         (assoc cmp :pool (ldap/connect conn-info)
                    :search-info search-info)
