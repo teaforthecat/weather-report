@@ -5,11 +5,11 @@
             [manifold.stream :as ms]
             [bones.conf :as bc]
             [bones.http :as http]
-            [bones.stream.core :as stream]
-            [bones.stream.kafka :as kafka]
-            [bones.stream.redis :as redis]
+            [bones.stream
+             [core :as stream]
+             [jobs :as jobs]
+             [protocols :as p]]
             [weather-report.auth :as auth]
-            [weather-report.worker :as worker]
             [weather-report.accounts :as accounts]
             [clojure.string :as string]))
 
@@ -31,14 +31,14 @@
 
 (defn add-account [args auth-info req]
   (let [{:keys [xact-id evo-id]} args
-        producer (:producer @sys)]
+        message {
+                 ;; key needs to be a string(?)
+                 :key (str xact-id)
+                 ;; message can be nil for compaction
+                 :message (if evo-id {:evo-id evo-id})}]
+
     (merge {:args args}
-           @(kafka/produce producer
-                           "accounts"
-                           ;; serialized to integer
-                           (str xact-id)
-                           ;; nil for compaction
-                           (if evo-id {:evo-id evo-id} nil)))))
+           (p/input (:job @sys) message))))
 
 (comment
   ;; create
@@ -50,12 +50,15 @@
   )
 
 (defn format-event [request message]
-  {:data message})
+  ;;; hmmm evo-id and xact-id are strings...
+  (let [msg {:evo-id (get-in message [:message "evo-id"])
+             :xact-id (get-in message [:key])}
+        int-msg (s/conform ::accounts/upsert msg)]
+    {:data int-msg}))
 
 (defn event-stream [request auth-info]
-  (let [redis (:redis @sys)
-        message-stream (ms/stream)
-        _ (.subscribe redis "accounts" message-stream)
+  (let [message-stream (ms/stream)
+        _ (p/output (:job @sys) message-stream)
         events (ms/transform (map (partial format-event request))
                              message-stream)]
     events))
@@ -80,8 +83,8 @@
   (let [{:keys [account accounts]} args
         redi (:redis @sys)]
     (if account
-      {:results @(redis/fetch redi account)}
-      {:results @(redis/fetch-all redi "accounts")})))
+      {:results @(p/fetch redi account)}
+      {:results @(p/fetch-all redi "accounts")})))
 
 (def query-schema ::accounts/list)
 
@@ -92,6 +95,7 @@
      ;; WR_ENV is a made up environment variable to set in a deployed environment.
      ;; The resolved file can be used to override the secret (and everything else in conf)
      {:conf-files (remove nil? ["config/common.edn"
+                                "config/dev-config.edn"
                                 "config/ldap.edn"
                                 "config/$WR_ENV.edn"
                                 conf-file-arg])
@@ -113,8 +117,10 @@
 (defn init-system [config]
   (build-system sys config)
   (http/build-system sys config)
-  (stream/build-system sys config)
-  (worker/build-system sys config))
+  (stream/build-system sys
+                       ;; :accounts doesn't do anything yet
+                       (jobs/bare-job :accounts "accounts")
+                       config))
 
 (defn -main
   "The entry-point for 'lein trampoline run'"

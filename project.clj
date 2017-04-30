@@ -9,10 +9,19 @@
 
 
                  ;; bones.stream
+                 ;; [com.taoensso/carmine "2.16.0"]
+                 ;; [org.onyxplatform/onyx-kafka "0.8.8.0"]
+                 ;; ;; [manifold "0.1.6-alpha4"] ;; provided by aleph
+                 ;; [com.cognitect/transit-clj "0.8.297"]
+
+                 [org.onyxplatform/onyx "0.10.0-beta8"]
                  [com.taoensso/carmine "2.16.0"]
-                 [org.onyxplatform/onyx-kafka "0.8.8.0"]
-                 ;; [manifold "0.1.6-alpha4"] ;; provided by aleph
+                 [org.onyxplatform/onyx-kafka "0.10.0.0-beta10"]
+                 [cheshire "5.5.0"] ;; missing from ok deps
+                 [aero "0.2.0"]     ;; missing from ok deps
+                 [manifold "0.1.6-alpha4"]
                  [com.cognitect/transit-clj "0.8.297"]
+
 
                  ;; domain specific
                  [org.clojars.pntblnk/clj-ldap "0.0.12"]
