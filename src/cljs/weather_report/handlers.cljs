@@ -72,6 +72,7 @@
   (let [id (:xact-id message)
         evo-id (:evo-id message)]
     (if evo-id
+      ;; upsert
       {:dispatch [:editable [:editable :accounts id :inputs message]
                   [:editable :accounts id :state :editing :evo-id false]]}
       ;; deletion

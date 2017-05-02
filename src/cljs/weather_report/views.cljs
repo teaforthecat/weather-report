@@ -20,7 +20,9 @@
 (defn navigation []
   [:div#primary-navigation
    [:div.sr-primary-nav
-    (translate :weather-report)]])
+    [:img.lightning {:src "lightning.svg"}]
+    [:h2
+     (translate :weather-report)]]])
 
 (defn accounts-view []
   [c/toggle [:bones/logged-in?]

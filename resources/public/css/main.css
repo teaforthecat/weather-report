@@ -3540,4 +3540,13 @@ ol.form li {
   ol.form li input[type="password"].short {
     width: 200px; }
 
+#primary-navigation .sr-primary-nav h2 {
+  color: white;
+  margin: 15px; }
+
+img.lightning {
+  height: 30px;
+  padding-left: 20px;
+  float: left; }
+
 /*# sourceMappingURL=main.css.map */
