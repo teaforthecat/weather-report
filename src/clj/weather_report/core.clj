@@ -34,7 +34,7 @@
         message {
                  ;; key needs to be a string(?)
                  :key (str xact-id)
-                 ;; message can be nil for compaction
+                 ;; message can be nil for kafka log compaction
                  :message (if evo-id {:evo-id evo-id})}]
 
     (merge {:args args}
@@ -50,9 +50,10 @@
   )
 
 (defn format-event [request message]
-  ;;; hmmm evo-id and xact-id are strings...
+  ;; coming from json-plain keywords turned to strings
   (let [msg {:evo-id (get-in message [:message "evo-id"])
              :xact-id (get-in message [:key])}
+        ;;; hmmm evo-id and xact-id are strings...
         int-msg (s/conform ::accounts/upsert msg)]
     {:data int-msg}))
 
@@ -78,6 +79,11 @@
     'weather-report.core/add-account]
    [:accounts/delete ::accounts/delete
     'weather-report.core/add-account]])
+
+
+(defn read-command [segment]
+  ;; nothing to do here
+  segmen)
 
 (defn query-handler [args auth-info req]
   (let [{:keys [account accounts]} args
@@ -118,8 +124,7 @@
   (build-system sys config)
   (http/build-system sys config)
   (stream/build-system sys
-                       ;; :accounts doesn't do anything yet
-                       (jobs/bare-job :accounts "accounts")
+                       (jobs/single-function-job ::read-command "accounts")
                        config))
 
 (defn -main
