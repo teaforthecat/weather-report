@@ -11,6 +11,7 @@
              [protocols :as p]]
             [weather-report.auth :as auth]
             [weather-report.accounts :as accounts]
+            [weather-report.user :as user]
             [clojure.string :as string]))
 
 (def sys (atom {}))
@@ -24,10 +25,6 @@
       nil ;; 401
       )))
 
-;; (def login-schema {:username s/Str :password s/Str})
-(s/def ::username string?)
-(s/def ::password string?)
-(s/def ::login (s/keys :req-un [::username ::password]))
 
 (defn add-account [args auth-info req]
   (let [{:keys [xact-id evo-id]} args
@@ -70,7 +67,7 @@
   (event-stream e {})
   (ms/consume println e)
   )
-
+;; maybe encapsulate :new,:update,:delete,:delete-many from editable
 (def commands
   [[:accounts/upsert ::accounts/upsert
     'weather-report.core/add-account]
@@ -80,10 +77,9 @@
    [:accounts/delete ::accounts/delete
     'weather-report.core/add-account]])
 
-
 (defn read-command [segment]
   ;; nothing to do here
-  segmen)
+  segment)
 
 (defn query-handler [args auth-info req]
   (let [{:keys [account accounts]} args
@@ -91,8 +87,6 @@
     (if account
       {:results @(p/fetch redi account)}
       {:results @(p/fetch-all redi "accounts")})))
-
-(def query-schema ::accounts/list)
 
 (defn conf [args]
   (let [conf-file-arg (first args)
@@ -103,14 +97,14 @@
      {:conf-files (remove nil? ["config/common.edn"
                                 "config/dev-config.edn"
                                 "config/ldap.edn"
-                                "config/$WR_ENV.edn"
+                                "$WR_ENV.edn"
                                 conf-file-arg])
       :use-fake-ldap use-fake-ldap
       ::http/service {:port 8080}
       ::http/handlers {:mount-path "/api"
-                       :login [::login login]
+                       :login [::user/login login]
                        :commands commands
-                       :query [query-schema query-handler]
+                       :query [::accounts/list query-handler]
                        :event-stream event-stream}
       :stream {:serialization-format :json-plain}})))
 
@@ -142,10 +136,13 @@
   ;; for the repl
   (println "hi")
   (-main nil "-use-fake-ldap") ; backend process
+
   ;; (-main nil)
 
   (user/fig) ; frontend process
   (user/cljs) ; switch to browser repl `:cljs/quit' to switch back
+  (require '[re-frame.core :as re-frame :refer [dispatch]])
+
   :cljs/quit
 
   (swap! sys component/stop-system)

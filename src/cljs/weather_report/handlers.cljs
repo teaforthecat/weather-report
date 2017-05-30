@@ -32,6 +32,18 @@
         [_ e-type identifier] e-scope]
     {:dispatch (into e-scope [:errors :message "Invalid username or password"])}))
 
+(defmethod response/handler [:response/login 502]
+  [{:keys [db client]} [channel response status tap]]
+  (let [{:keys [e-scope]} tap
+        [_ e-type identifier] e-scope]
+    {:dispatch (into e-scope [:errors :message "The Server responded with 'Bad Gateway'."])}))
+
+(defmethod response/handler [:response/login 0]
+  [{:keys [db client]} [channel response status tap]]
+  (let [{:keys [e-scope]} tap
+        [_ e-type identifier] e-scope]
+    {:dispatch (into e-scope [:errors :message "Could not connect to server."])}))
+
 (defn result-to-editable-account [item]
   ;; TODO: conform to spec here instead
   (let [xact-id (js/parseInt (:key item))

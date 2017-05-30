@@ -5,7 +5,7 @@
                  [com.stuartsierra/component "0.3.1"]
                  ;; bones deps
                  [bones/conf "0.2.2"]
-                 [bones/http "0.3.1"]
+                 [bones/http "0.3.3"]
 
 
                  ;; bones.stream

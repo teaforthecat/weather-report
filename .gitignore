@@ -10,3 +10,4 @@ logs/
 /tmp/
 /node_modules
 /.sass-cache
+/.cljs_rhino_repl
