@@ -16,7 +16,8 @@
 (def default-db
   {:name "re-frame"
    :accounts ()
-   :editable {:accounts {:_meta {:spec ::accounts/fusion}}}
+   :editable {:accounts {:_meta {:spec ::accounts/fusion
+                                 :defaults {:src "wr-admin"}}}}
    ;; we want this to just happen once on page load
    :components {:user-info (get-storage-item :user-info)
                 :undos ()}})

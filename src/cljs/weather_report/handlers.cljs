@@ -3,6 +3,7 @@
             [bones.editable.helpers :as h]
             [bones.editable.response :as response]
             [re-frame.core :as re-frame]
+            [reagent.core :as reagent]
             [weather-report.db :as db]))
 
 (def debug?
@@ -19,11 +20,24 @@
  (fn [_ _]
    db/default-db))
 
+(defn also-dispatch [event]
+  (reagent/next-tick #(re-frame/dispatch event)))
+
+(re-frame.core/reg-event-db
+ :handle-login
+ (fn [db [_ response]]
+   ;; :share is configured as meta data returned by the login request
+   ;; handler (in core.clj)
+   (let [shared-data (get response "share")]
+     (db/set-storage-item :user-info shared-data)
+     (assoc-in db [:components :user-info] shared-data))))
+
 (defmethod response/handler [:response/login 200]
   [{:keys [db client]} [channel response status tap]]
   (let [{:keys [e-scope]} tap
         [_ e-type identifier] e-scope]
-    {:dispatch (h/editable-reset e-type identifier {})
+    (also-dispatch (h/editable-reset e-type identifier {}))
+    {:dispatch [:handle-login response]
      :start-client {:start true}}))
 
 (defmethod response/handler [:response/login 401]

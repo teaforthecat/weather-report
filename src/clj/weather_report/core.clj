@@ -20,6 +20,8 @@
     (if-let [result (auth/authenticate conn
                                   (:username args)
                                   (:password args))]
+      ;; only share keys are added to the response body
+      ;; this is because the result is encrypted into a token and not visible
       (with-meta result {:share [:groups :display-name]})
       nil ;; 401
       )))
@@ -31,14 +33,20 @@
 
 (defn add-account [args auth-info req]
   (let [{:keys [xact-id evo-id]} args
-        producer (:producer @sys)]
+        producer (:producer @sys)
+        ;; I'm not sure where "default" comes from
+        username (get-in auth-info ["default" :display-name])
+        audit-src (if username (str "wr-admin-" username) "wr-admin")]
     (merge {:args args}
            @(kafka/produce producer
-                           "accounts"
-                           ;; serialized to integer
+                           "xact-to-evo-data-share"
+                           ;; must be a string
                            (str xact-id)
                            ;; nil for compaction
-                           (if evo-id {:evo-id evo-id} nil)))))
+                           (if evo-id
+                             {"evolution_account_id" evo-id
+                              "src" audit-src}
+                             nil)))))
 
 (comment
   ;; create
@@ -55,7 +63,7 @@
 (defn event-stream [request auth-info]
   (let [redis (:redis @sys)
         message-stream (ms/stream)
-        _ (.subscribe redis "accounts" message-stream)
+        _ (.subscribe redis "xact-to-evo-data-share" message-stream)
         events (ms/transform (map (partial format-event request))
                              message-stream)]
     events))
@@ -81,7 +89,7 @@
         redi (:redis @sys)]
     (if account
       {:results @(redis/fetch redi account)}
-      {:results @(redis/fetch-all redi "accounts")})))
+      {:results @(redis/fetch-all redi "xact-to-evo-data-share")})))
 
 (def query-schema ::accounts/list)
 

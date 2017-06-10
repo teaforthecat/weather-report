@@ -4,15 +4,23 @@
             [bones.stream.core :as stream]
             [com.stuartsierra.component :as component]))
 
-
 (defn write-account-message [redis message]
   (let [k (:key message)
         v (:value message)
-        offset (:offset message)]
-    (redis/write redis "accounts" k v)
+        offset (:offset message)
+        ;; evo-id is a string here to keep the idea of json going from kafka to
+        ;; redis. Nothing relies on this being json in redis though, so it could
+        ;; change.
+        different-evo-key (assoc v "evo-id" (get v "evolution_account_id"))]
+    (redis/write redis "xact-to-evo-data-share" k different-evo-key)
     ;; converted from json
-    (redis/publish redis "accounts" {:evo-id (get v "evo-id")
-                                     :xact-id k})))
+    (redis/publish redis
+                   "xact-to-evo-data-share"
+                   ;; (defmethod response/handler :event/message
+                   ;; receives this on the client
+                   {:evo-id (get v "evolution_account_id")
+                    :src (get v "src")
+                    :xact-id k})))
 
 (defrecord Worker []
   component/Lifecycle
@@ -24,7 +32,7 @@
       ;; todo how to start from beginning
       ;; returns future, never realized
       (kafka/consume consumer
-                     "accounts"
+                     "xact-to-evo-data-share"
                      (partial write-account-message redis))
       (assoc cmp :accounts-worker :working)))
   (stop [cmp]
