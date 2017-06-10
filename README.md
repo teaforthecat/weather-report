@@ -4,15 +4,15 @@ Dummy app for Bones testing.
 
 ## Development Mode
 
-### Start Cider from Emacs:
 
-Put this in your Emacs config file:
+attach to a repl and evaluate the forms at the bottom of core.clj
 
 ```
-(setq cider-cljs-lein-repl "(do (use 'figwheel-sidecar.repl-api) (start-figwheel!) (cljs-repl))")
-```
+  (-main nil "-use-fake-ldap") ; backend process
+  ;;or 
+  (-main "other/conf.edn")
 
-Navigate to a clojurescript file and start a figwheel REPL with `cider-jack-in-clojurescript` or (`C-c M-J`)
+```
 
 ### CSS development
 

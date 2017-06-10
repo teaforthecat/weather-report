@@ -1,4 +1,4 @@
-(defproject weather-report "0.2.0"
+(defproject weather-report "0.2.1"
   :dependencies [[org.clojure/clojure "1.9.0-alpha14"]
                  [org.clojure/clojurescript "1.9.229"]
 
