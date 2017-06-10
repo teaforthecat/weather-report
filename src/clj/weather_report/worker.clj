@@ -11,7 +11,8 @@
         ;; evo-id is a string here to keep the idea of json going from kafka to
         ;; redis. Nothing relies on this being json in redis though, so it could
         ;; change.
-        different-evo-key (assoc v "evo-id" (get v "evolution_account_id"))]
+        different-evo-key (if v (assoc v "evo-id" (get v "evolution_account_id")))]
+    ;; value needs to be possibly nil here for "compaction" in materialized view
     (redis/write redis "xact-to-evo-data-share" k different-evo-key)
     ;; converted from json
     (redis/publish redis
