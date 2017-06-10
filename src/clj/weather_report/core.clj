@@ -98,7 +98,7 @@
         ;; the first arg may be a path to a conf file, which will have top priority
         conf-file-arg (first args)
         ;; the string "-use-fake-ldap" can be anywhere in the args
-        use-fake-ldap (< 0 (.indexOf args "-use-fake-ldap"))]
+        use-fake-ldap (if args (< 0 (.indexOf args "-use-fake-ldap")))]
     (bc/map->Conf
      ;; WR_ENV is a made up environment variable to set in a deployed environment.
      ;; The resolved file can be used to override the secret (and everything else in conf)
