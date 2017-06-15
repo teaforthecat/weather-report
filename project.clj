@@ -51,6 +51,7 @@
   :profiles
   {:dev
    {:dependencies [
+                   [re-frisk "0.4.5"]
                    [figwheel-sidecar "0.5.4-3"]
                    [com.cemerick/piggieback "0.2.1"]
                    [org.clojure/test.check "0.9.0"]

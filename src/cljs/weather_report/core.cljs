@@ -3,6 +3,7 @@
             [re-frame.core :as re-frame]
             ;; if this isn't used it will be compiled out in advanced compilation
             [devtools.core :as devtools]
+            [re-frisk.core :refer [enable-re-frisk!]]
             [bones.client :as client]
             ;; load all the handlers immediately
             [weather-report.handlers]
@@ -43,6 +44,8 @@
 
 (defn ^:export init []
   (re-frame/dispatch-sync [:initialize-db])
+  (when ^boolean js/goog.DEBUG
+    (enable-re-frisk!))
   (client/build-system sys {:url weather-report.core/api-uri
                             :stream-handler re-frame/dispatch
                             :es/onopen client/log
@@ -57,3 +60,45 @@
 
   ;; then render
   (mount-root))
+
+
+
+
+
+
+
+
+
+
+
+(comment
+  ;; for the repl
+  (require '[re-frame.core :refer [dispatch]])
+  (require '[cljs.pprint :refer [pprint]])
+  (pprint @re-frame.db/app-db)
+
+
+
+  (dispatch [:editable :login :new :state :show true])
+  (dispatch [:editable :login :new :inputs :username "abcd"])
+  (dispatch [:editable :login :new :inputs :password "abcd"])
+  (dispatch [:request/login :login :new])
+
+  (dispatch [:editable :accounts :new :state :show true])
+  (dispatch [:editable :accounts :new :inputs :xact-id "123"])
+  (dispatch [:editable :accounts :new :inputs :evo-id "456"])
+  (dispatch [:request/command :accounts/upsert :new])
+
+  (dispatch [:editable :accounts 123 :state :editing :evo-id true])
+  (dispatch [:editable :accounts 123 :inputs :evo-id "789"])
+  (dispatch [:request/command :accounts/upsert 123])
+
+
+
+
+
+
+
+
+
+)
