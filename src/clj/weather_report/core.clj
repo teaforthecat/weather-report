@@ -6,10 +6,12 @@
             [bones.conf :as bc]
             [bones.http :as http]
             [bones.stream.core :as stream]
-            [bones.stream.kafka :as kafka]
+            [bones.stream.pipelines :as pipelines]
+            [bones.stream.jobs :as jobs]
+            [bones.stream.protocols :as p]
             [bones.stream.redis :as redis]
             [weather-report.auth :as auth]
-            [weather-report.worker :as worker]
+            ;; [weather-report.worker :as worker]
             [weather-report.accounts :as accounts]
             [clojure.string :as string]
             [taoensso.timbre :as log]))
@@ -39,15 +41,12 @@
         username (get-in auth-info ["default" :display-name])
         audit-src (if username (str "wr-admin-" username) "wr-admin")]
     (merge {:args args}
-           @(kafka/produce producer
-                           "xact-to-evo-data-share"
-                           ;; must be a string
-                           (str xact-id)
-                           ;; nil for compaction
-                           (if evo-id
-                             {"evolution_account_id" evo-id
-                              "src" audit-src}
-                             nil)))))
+           (p/input (:pipeline @sys) {:key (str xact-id)
+                                      :value (if evo-id
+                                             {"evolution_account_id" evo-id
+                                              "src" audit-src}
+                                             ;; nil for compaction
+                                             nil)}))))
 
 (comment
   ;; create
@@ -59,12 +58,17 @@
   )
 
 (defn format-event [request message]
-  {:data message})
+  ;; the keys from the kafka lib franzy are passed through redis unchanged
+  (let [v (:message message)
+        k (:key message)
+        msg {:evo-id (get v "evolution_account_id")
+             :src (get v "src")
+             :xact-id k}]
+    {:data msg}))
 
 (defn event-stream [request auth-info]
-  (let [redis (:redis @sys)
-        message-stream (ms/stream)
-        _ (.subscribe redis "xact-to-evo-data-share" message-stream)
+  (let [message-stream (ms/stream)
+        _ (p/output (:pipeline @sys) message-stream)
         events (ms/transform (map (partial format-event request))
                              message-stream)]
     events))
@@ -87,7 +91,8 @@
 
 (defn query-handler [args auth-info req]
   (let [{:keys [account accounts]} args
-        redi (:redis @sys)]
+        ;; TODO: need query interface here.. materialized view interface
+        redi (get-in @sys [:pipeline :output :redi])]
     (if account
       {:results @(redis/fetch redi account)}
       {:results @(redis/fetch-all redi "xact-to-evo-data-share")})))
@@ -120,14 +125,21 @@
 (defn build-system [system config]
   (let [cmp (if (:use-fake-ldap config) ;; top level keyword
               (component/using (auth/map->FakeLDAP {}) [:conf])
-              (component/using (auth/map->LDAP {}) [:conf]))]
-    (swap! system assoc :ldap cmp)))
+              (component/using (auth/map->LDAP {}) [:conf]))
+        ;; must match worker
+        job (jobs/series-> (get-in config [:stream])
+                           (jobs/input :kafka {:kafka/topic "xact-evo-data-share"
+                                               :kafka/serializer-fn :bones.stream.serializer/en-json-plain
+                                               :kafka/deserializer-fn :bones.stream.serializer/de-json-plain})
+                           (jobs/output :redis {:redis/channel "xact-evo-data-share"}))
+        pipeline (pipelines/pipeline job)]
+
+    (swap! system assoc :ldap cmp
+                        :pipeline pipeline)))
 
 (defn init-system [config]
   (build-system sys config)
-  (http/build-system sys config)
-  (stream/build-system sys config)
-  (worker/build-system sys config))
+  (http/build-system sys config))
 
 (defn -main
   "The entry-point for 'lein trampoline run'"

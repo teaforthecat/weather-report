@@ -15,7 +15,7 @@
       :cljs.spec/invalid)))
 
 (def int! (s/with-gen (s/conformer x-integer?)
-            #(s/gen int?)))
+            #(s/gen integer?)))
 
 (s/def ::xact-id int!)
 

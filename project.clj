@@ -1,5 +1,9 @@
 (defproject weather-report "0.2.3"
-  :dependencies [[org.clojure/clojure "1.9.0"]
+  :dependencies [
+                 ;; [org.clojure/clojure "1.9.0-alpha14"]
+                 [org.clojure/clojure "1.8.0"] ;; onyx
+                 [org.clojure/spec.alpha "0.1.123"]
+
                  [org.clojure/clojurescript "1.9.229"]
 
                  [com.stuartsierra/component "0.3.1"]
@@ -9,10 +13,19 @@
 
 
                  ;; bones.stream
+                 [org.onyxplatform/onyx-local-rt "0.10.0.0-beta8"]
+
+                 [org.onyxplatform/lib-onyx "0.10.0.0"]
+                 [org.onyxplatform/onyx "0.10.0-beta10"]
+                 [org.onyxplatform/onyx-kafka "0.10.0.0-beta10"]
                  [com.taoensso/carmine "2.16.0"]
-                 [org.onyxplatform/onyx-kafka "0.8.8.0"]
-                 ;; [manifold "0.1.6-alpha4"] ;; provided by aleph
+                 ;; [clj-kafka "0.3.4"];; onyx-kafka moved to franzy
+                 ;; [cheshire "5.5.0"] ;; missing from onyx-kafka deps
+                 ;; [aero "0.2.0"]     ;; missing from onyx-kafka deps
+                 [manifold "0.1.6-alpha4"]
                  [com.cognitect/transit-clj "0.8.297"]
+
+
 
                  ;; domain specific
                  [org.clojars.pntblnk/clj-ldap "0.0.12"]
@@ -60,8 +73,9 @@
                    ]
     :source-paths ["dev"]
     }
-   :uberjar {:aot [weather-report.core]}
-   :browser {:test-paths ^:replace ["test/browser"]}}
+   :uberjar {:aot [weather-report.core
+                   weather-report.worker
+                   lib-onyx.media-driver]}}
 
   :cljsbuild
   {:builds
