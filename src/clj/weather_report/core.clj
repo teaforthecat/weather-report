@@ -7,14 +7,13 @@
             [bones.http :as http]
             [bones.stream.core :as stream]
             [bones.stream.pipelines :as pipelines]
-            [bones.stream.jobs :as jobs]
             [bones.stream.protocols :as p]
             [bones.stream.redis :as redis]
             [weather-report.auth :as auth]
             ;; [weather-report.worker :as worker]
             [weather-report.accounts :as accounts]
-            [clojure.string :as string]
-            [taoensso.timbre :as log]))
+            [weather-report.jobs :as jobs]
+            [clojure.string :as string]))
 
 (def sys (atom {}))
 
@@ -75,9 +74,9 @@
 
 (comment
   @redis/listeners
-  (def e (ms/stream))
-  (event-stream e {})
-  (ms/consume println e)
+  (def message-stream (ms/stream))
+  (p/output (:pipeline @sys) message-stream)
+  (ms/consume println message-stream)
   )
 
 (def commands
@@ -106,7 +105,7 @@
         ;; the string "-use-fake-ldap" can be anywhere in the args
         use-fake-ldap (if args (< 0 (.indexOf args "-use-fake-ldap")))]
     (bc/map->Conf
-     ;; WR_ENV is a made up environment variable to set in a deployed environment.
+     ;; APP_ENV is a made up environment variable to set in a deployed environment.
      ;; The resolved file can be used to override the secret (and everything else in conf)
      {:conf-files (remove nil? ["config/common.edn"
                                 "config/ldap.edn"
@@ -119,19 +118,16 @@
                        :login [::login login]
                        :commands commands
                        :query [query-schema query-handler]
-                       :event-stream event-stream}
-      :stream {:serialization-format :json-plain}})))
+                       :event-stream event-stream}})))
 
 (defn build-system [system config]
   (let [cmp (if (:use-fake-ldap config) ;; top level keyword
               (component/using (auth/map->FakeLDAP {}) [:conf])
               (component/using (auth/map->LDAP {}) [:conf]))
         ;; must match worker
-        job (jobs/series-> (get-in config [:stream])
-                           (jobs/input :kafka {:kafka/topic "xact-evo-data-share"
-                                               :kafka/serializer-fn :bones.stream.serializer/en-json-plain
-                                               :kafka/deserializer-fn :bones.stream.serializer/de-json-plain})
-                           (jobs/output :redis {:redis/channel "xact-evo-data-share"}))
+        job (jobs/xact-evo-data-share config)
+        ;; used in worker:
+        ;;; (submit-job job)
         pipeline (pipelines/pipeline job)]
 
     (swap! system assoc :ldap cmp

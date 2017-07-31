@@ -1,25 +1,22 @@
 (ns weather-report.worker
   (:require [com.stuartsierra.component :as component]
             [bones.conf :as conf]
-            [bones.stream.jobs :as jobs]
-            [bones.stream.core :as stream]))
+            [bones.stream.core :as stream]
+            [weather-report.jobs :as jobs]))
 
 
 ;; create global state
 (def system (atom {}))
 
 (defn -main []
-  (let [cfg (conf/map->Conf {:conf-files ["resources/dev-config.edn"
+  (let [config (conf/map->Conf {:conf-files ["resources/dev-config.edn"
                                           "resources/stream.edn"]})
-        job (jobs/series-> (get-in cfg [:stream])
-                           (jobs/input :kafka {:kafka/topic "xact-evo-data-share"
-                                               :kafka/serializer-fn :bones.stream.serializer/en-json-plain
-                                               :kafka/deserializer-fn :bones.stream.serializer/de-json-plain})
-                           (jobs/output :redis {:redis/channel "xact-evo-data-share"}))
-        ;; use in web:
-        ;; pipeline (stream/pipeline job)
+
+        job (jobs/xact-evo-data-share config)
+        ;; used in web:
+        ;; (stream/pipeline job)
         ]
-    (stream/build-system system cfg)
+    (stream/build-system system config)
     (stream/start system)
     (stream/submit-job system job)
     ) )
