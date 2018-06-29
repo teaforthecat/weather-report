@@ -50,7 +50,9 @@
 (defn remove-btn [id]
   [:div.actions
    ;; to delete evo-id is to invoke log compaction is to delete the fusion
-   (small-button "Remove" (command :accounts/delete {:evo-id nil :xact-id id}))])
+   (small-button "Remove" (command :accounts/delete {:evo-id nil :xact-id id})
+                 :id (str "remove-" id)
+                 :class " remove ")])
 
 (defn account-row [id]
   (let [{:keys [inputs state reset save edit]} (e/form :accounts id)]
@@ -64,11 +66,13 @@
          [e/input :accounts id :evo-id
           :type "text"
           :on-blur reset
+          :id :evo-id
           :on-key-down (e/detect-controls {:enter save
                                            :escape reset})]]
         ;; when not :editing :evo-id
         [:td.center
-         {:on-double-click (edit :evo-id)}
+         {:on-click (edit :evo-id)
+          :id (str "evo-id-" id)}
          (inputs :evo-id)]]
        [:td.center
         [remove-btn (inputs :xact-id)]]])))
@@ -135,9 +139,11 @@
         ]]
       (into [:div.fields] fields)
       [:div.buttons
-       [:button.sr-button {:on-click (:on-click cancel)}
+       [:button.sr-button {:on-click (:on-click cancel)
+                           :id :cancel}
         (:label cancel "Cancel")]
-       [:button.sr-button {:on-click (:on-click submit)}
+       [:button.sr-button {:on-click (:on-click submit)
+                           :id :submit}
         (:label submit "Submit")]]]]]])
 
 (defn account-fusion-form []
@@ -160,6 +166,7 @@
                [:label.control-label {:for :evo-id} "EvoId"]
                [e/input :accounts :new :evo-id
                 :class "short form-control"
+                :id :evo-id
                 :type "text"]]
               ])))
 
@@ -189,7 +196,8 @@
 (defn login-form []
   [toggle [:editable :login :new :state :show]
    [login-modal]
-   [:button.sr-button {:on-click #(dispatch [:editable :login :new :state :show true])}
+   [:button.sr-button {:on-click #(dispatch [:editable :login :new :state :show true])
+                       :id :login}
     "Login"]])
 
 (defn login []
@@ -200,7 +208,8 @@
 (defn add-account []
   [toggle [:editable :accounts :new :state :show]
    [account-fusion-form]
-   (button "New Account Fusion" [:editable :accounts :new :state :show true] {})])
+   (button "New Account Fusion" [:editable :accounts :new :state :show true]
+           {:id :new-account-fusion})])
 
 (defn user-info []
   (let [user-info (subscribe [:components :user-info])

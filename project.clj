@@ -27,7 +27,8 @@
                  [bones/client "0.2.6"]
                  [bones/editable "0.1.4"]
 
-                 ]
+                 ;; browser
+                 [etaoin "0.2.8-SNAPSHOT"]]
 
   :plugins [[lein-cljsbuild "1.1.5"]]
 
@@ -61,7 +62,8 @@
                    ]
     :source-paths ["dev"]
     }
-   :uberjar {:aot [weather-report.core]}}
+   :uberjar {:aot [weather-report.core]}
+   :browser {:test-paths ^:replace ["test/browser"]}}
 
   :cljsbuild
   {:builds
