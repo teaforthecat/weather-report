@@ -1,7 +1,7 @@
 (ns weather-report.core
   (:gen-class)
   (:require [com.stuartsierra.component :as component]
-            [clojure.spec :as s]
+            [clojure.spec.alpha :as s]
             [manifold.stream :as ms]
             [bones.conf :as bc]
             [bones.http :as http]
@@ -11,7 +11,8 @@
             [weather-report.auth :as auth]
             [weather-report.worker :as worker]
             [weather-report.accounts :as accounts]
-            [clojure.string :as string]))
+            [clojure.string :as string]
+            [taoensso.timbre :as log]))
 
 (def sys (atom {}))
 
@@ -137,19 +138,23 @@
                                (swap! sys component/stop-system))))
 
   (init-system (conf args))
-  (swap! sys component/start-system))
+  (swap! sys component/start-system)
+  (log/info (str "http server listening on port " (get-in @sys [:conf ::http/service :port])) )
+  (log/info (str "http server allowing cors from " (get-in @sys [:conf ::http/auth :cors-allow-origin]))))
 
 (comment
   ;; for the repl
   (println "hi")
+
   (-main nil "-use-fake-ldap") ; backend process
-  ;; (-main nil)
+ ;; (-main nil)
 
   (user/fig) ; frontend process
   (user/cljs) ; switch to browser repl `:cljs/quit' to switch back
   :cljs/quit
 
   (swap! sys component/stop-system)
+
   (swap! sys component/start-system)
 
   )

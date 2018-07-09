@@ -1,6 +1,6 @@
 (ns weather-report.accounts
   (:require #?(:cljs [cljs.spec :as s]
-               :clj [clojure.spec :as s])
+               :clj [clojure.spec.alpha :as s])
             ))
 
 (defn x-integer? [x]
@@ -49,7 +49,7 @@
           :ret map?)
 
 
-  (require '[clojure.spec.gen :as gen])
+  (require '[clojure.spec.alpha.gen :as gen])
 
   (gen/generate  (s/gen ::evo-id))
 

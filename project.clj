@@ -1,11 +1,11 @@
 (defproject weather-report "0.2.3"
-  :dependencies [[org.clojure/clojure "1.9.0-alpha14"]
+  :dependencies [[org.clojure/clojure "1.9.0"]
                  [org.clojure/clojurescript "1.9.229"]
 
                  [com.stuartsierra/component "0.3.1"]
                  ;; bones deps
                  [bones/conf "0.2.2"]
-                 [bones/http "0.3.1"]
+                 [bones/http "0.3.4"]
 
 
                  ;; bones.stream
@@ -45,8 +45,6 @@
 
   :repl-options {:nrepl-middleware [cemerick.piggieback/wrap-cljs-repl]}
 
-  ;; todo: what does aot do?
-  ;; :main ^{:skip-aot true} weather-report.core
   :main weather-report.core
 
   :profiles
@@ -83,9 +81,9 @@
                     :optimizations   :advanced
                     :closure-defines {goog.DEBUG false
                                       ;; served on same domain
-                                      weather-report.core/api-uri "/api"
+                                      ;; weather-report.core/api-uri "/api"
                                       ;; weather-report.core/api-uri "http://qc-rolodex1.ep.gdi/api"
-                                      ;; weather-report.core/api-uri "http://localhost:8080/api"
+                                      weather-report.core/api-uri "http://localhost:8080/api"
                                       }
                     :pretty-print    false}}
     {:id           "test"

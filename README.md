@@ -40,6 +40,15 @@ lein test                              # clj
 lein doo phantom test once             # cljs
 ```
 
+### Automated tests:
+
+```
+docker-compose up -d
+lein trampoline run config/common.edn -use-fake-ldap
+lein cljsbuild once min 
+lein with-profile browser test
+```
+
 The above command assumes that you have [phantomjs](https://www.npmjs.com/package/phantomjs) installed. However, please note that [doo](https://github.com/bensu/doo) can be configured to run cljs.test in many other JS environments (chrome, ie, safari, opera, slimer, node, rhino, or nashorn).
 
 ## Production Build

@@ -40,6 +40,12 @@
     {:dispatch [:handle-login response]
      :start-client {:start true}}))
 
+(defmethod response/handler [:response/login -1]
+  [{:keys [db client]} [channel response status tap]]
+  (let [{:keys [e-scope]} tap
+        [_ e-type identifier] e-scope]
+    {:dispatch (into e-scope [:errors :message "Could not connect to server"])}))
+
 (defmethod response/handler [:response/login 401]
   [{:keys [db client]} [channel response status tap]]
   (let [{:keys [e-scope]} tap
@@ -52,6 +58,18 @@
         _evo-id (get-in item [:value "evo-id"])
         evo-id (if _evo-id (js/parseInt _evo-id))]
     {xact-id {:inputs {:xact-id xact-id :evo-id evo-id}}}))
+
+(defmethod response/handler [:response/query 0]
+  [{:keys [db client]} [channel response status tap]]
+  (let [{:keys [e-scope]} tap
+        [_ e-type identifier] e-scope]
+    {:dispatch (into e-scope [:errors :message "Could not connect to server"])}))
+
+(defmethod response/handler [:response/command 0]
+  [{:keys [db client]} [channel response status tap]]
+  (let [{:keys [e-scope]} tap
+        [_ e-type identifier] e-scope]
+    {:dispatch (into e-scope [:errors :message "Could not connect to server"])}))
 
 (defmethod response/handler [:response/query 200]
   [{:keys [db]} [channel response status tap]]
