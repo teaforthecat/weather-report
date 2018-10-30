@@ -35,7 +35,6 @@
 
 (defn add-account [args auth-info req]
   (let [{:keys [xact-id evo-id]} args
-        producer (:producer @sys)
         ;; I'm not sure where "default" comes from
         username (get-in auth-info ["default" :display-name])
         audit-src (if username (str "wr-admin-" username) "wr-admin")]
